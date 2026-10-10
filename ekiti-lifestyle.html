@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="theme-color" content="#1f6b4a">
+<meta name="description" content="Ekiti Lifestyle is an original 2D life simulator prototype set in an Ekiti-inspired neighbourhood.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ekiti Lifestyle — A Life in Ado-Ekiti</title>
+<style>
+:root{--ink:#263044;--muted:#68748a;--cream:#fffaf0;--card:#ffffff;--green:#67b88b;--pink:#ff9eb5;--blue:#83b8f2;--gold:#f6c85f;--line:#e9e4d9}
+*{box-sizing:border-box}body{margin:0;background:#f4f1e8;color:var(--ink);font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;background:#fffdf8;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{font-weight:900;font-size:1.35rem;letter-spacing:-.04em}.brand span{color:#36a477}.sub{font-size:.78rem;color:var(--muted)}
+button{border:0;border-radius:14px;padding:10px 13px;font:inherit;font-weight:800;cursor:pointer;background:#263044;color:white;box-shadow:0 3px 0 #171f2c;touch-action:manipulation}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #171f2c}
+button.soft{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:0 3px 0 #e5dfd2}
+button.green{background:#36a477;box-shadow:0 3px 0 #237754}
+main{max-width:1180px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(270px,.85fr);gap:16px}
+.game-card,.panel{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 8px 22px #43351a0a}
+.game-top{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;gap:8px}.pill{background:#f1f7ee;color:#39805c;border-radius:99px;padding:6px 10px;font-size:.76rem;font-weight:800}
+canvas{display:block;width:100%;height:auto;aspect-ratio:4/3;background:#c8e9b8;image-rendering:pixelated;touch-action:none}
+.controls{display:flex;justify-content:space-between;gap:12px;padding:12px;background:#fffdf8;align-items:center}.dpad{display:grid;grid-template-columns:42px 42px 42px;grid-template-rows:38px 38px;gap:4px}.dpad button{padding:0;border-radius:10px;font-size:1.1rem}.dpad .up{grid-column:2}.dpad .left{grid-column:1;grid-row:2}.dpad .down{grid-column:2;grid-row:2}.dpad .right{grid-column:3;grid-row:2}.hint{font-size:.75rem;color:var(--muted);line-height:1.4;max-width:220px}
+.side{display:flex;flex-direction:column;gap:14px}.panel{padding:16px}.panel h2{font-size:1rem;margin:0 0 12px}.sim-head{display:flex;align-items:center;gap:12px}.avatar{width:56px;height:56px;border-radius:18px;background:#fff0d8;display:grid;place-items:center;font-size:2rem}.sim-name{font-size:1.15rem;font-weight:900}.money{margin-left:auto;background:#fff6d8;border-radius:12px;padding:8px 10px;font-weight:900;color:#886315}
+.stat{display:grid;grid-template-columns:76px 1fr 32px;gap:8px;align-items:center;margin:12px 0;font-size:.8rem;font-weight:800}.bar{height:10px;background:#eeeef1;border-radius:99px;overflow:hidden}.fill{height:100%;width:75%;border-radius:99px;transition:width .25s}.stat small{text-align:right;color:var(--muted)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions button{font-size:.82rem;padding:11px 8px}.actions button:disabled{opacity:.45;cursor:not-allowed}
+.message{background:#f6f8ff;border-radius:14px;padding:11px 12px;font-size:.83rem;line-height:1.45;color:#4a5875;min-height:52px}
+.quest{display:flex;gap:9px;align-items:flex-start;font-size:.83rem;line-height:1.4}.check{background:#e4f5e9;color:#27845b;border-radius:8px;padding:3px 7px;font-weight:900}
+footer{text-align:center;color:var(--muted);font-size:.75rem;padding:0 16px 22px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#263044;color:white;padding:12px 18px;border-radius:14px;box-shadow:0 8px 30px #0002;z-index:10;max-width:90%;font-size:.88rem;display:none}
+@media(max-width:780px){main{grid-template-columns:1fr;padding:10px;gap:10px}header{padding:11px 13px}.brand{font-size:1.15rem}.sub{display:none}.game-card,.panel{border-radius:18px}.controls{padding:10px}.hint{max-width:170px}.side{display:grid;grid-template-columns:1fr}.game-top{padding:10px 12px}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">🌱 Little<span>Life</span></div><div class="sub">Ado-Ekiti neighbourhood. Your own story.</div></div><button class="soft" id="resetBtn">↻ New day</button></header>
+<main>
+<section class="game-card">
+  <div class="game-top"><strong>🏡 Maplewood starter home</strong><span class="pill" id="timePill">Day 1 · 8:00 AM</span></div>
+  <canvas id="world" width="640" height="480" aria-label="Ekiti Lifestyle game world"></canvas>
+  <div class="controls">
+    <div class="dpad" aria-label="Movement controls">
+      <button class="soft up" data-move="up" aria-label="Move up">▲</button>
+      <button class="soft left" data-move="left" aria-label="Move left">◀</button>
+      <button class="soft down" data-move="down" aria-label="Move down">▼</button>
+      <button class="soft right" data-move="right" aria-label="Move right">▶</button>
+    </div>
+    <div class="hint"><b>Move:</b> arrow keys / WASD or the buttons.<br><b>Interact:</b> walk close to an object, then tap an action.</div>
+  </div>
+</section>
+<aside class="side">
+  <section class="panel">
+    <div class="sim-head"><div class="avatar">🧑🏽‍🌾</div><div><div class="sim-name" id="simName">Dami Ade</div><div class="sub">Aspiring little-life legend</div></div><div class="money" id="money">$120</div></div>
+    <div style="margin-top:16px">
+      <div class="stat"><span>🍎 Hunger</span><div class="bar"><div class="fill" id="hungerFill" style="background:#f3b84d"></div></div><small id="hungerNum">75</small></div>
+      <div class="stat"><span>⚡ Energy</span><div class="bar"><div class="fill" id="energyFill" style="background:#8b9df5"></div></div><small id="energyNum">80</small></div>
+      <div class="stat"><span>🫧 Hygiene</span><div class="bar"><div class="fill" id="hygieneFill" style="background:#64c7d6"></div></div><small id="hygieneNum">80</small></div>
+      <div class="stat"><span>🎈 Fun</span><div class="bar"><div class="fill" id="funFill" style="background:#ee8cb0"></div></div><small id="funNum">65</small></div>
+      <div class="stat"><span>💬 Social</span><div class="bar"><div class="fill" id="socialFill" style="background:#75c58e"></div></div><small id="socialNum">55</small></div>
+    </div>
+  </section>
+  <section class="panel"><h2>✨ What do you want to do?</h2><div class="actions">
+    <button class="green" data-action="eat">🥪 Eat snack</button>
+    <button data-action="work">💼 Street gig (+$35)</button>
+    <button class="soft" data-action="sleep">🛏️ Take a nap</button>
+    <button class="soft" data-action="wash">🚿 Freshen up</button>
+    <button class="soft" data-action="fun">🎮 Play a game</button>
+    <button class="soft" data-action="social">💬 Call a friend</button>
+  </div></section>
+  <section class="panel"><h2>📖 Your little story</h2><div class="message" id="message">Welcome home! Explore your yard and try a few actions. Your story starts now.</div></section>
+  <section class="panel"><h2>🎯 Today's little goals</h2><div class="quest"><span class="check" id="goalEat">○</span><span>Eat something to keep your energy up.</span></div><div class="quest" style="margin-top:9px"><span class="check" id="goalWork">○</span><span>Complete a quick gig to earn money.</span></div><div class="quest" style="margin-top:9px"><span class="check" id="goalFun">○</span><span>Do something fun to lift your mood.</span></div></section>
+</aside>
+</main>
+<footer>Ekiti Lifestyle is an original, independent life-simulation prototype. No account or purchase required. Progress is saved in this browser.</footer>
+<div id="toast" role="status"></div>
+<script>
+(() => {
+const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');
+const W=640,H=480;
+let state={x:320,y:315,money:120,hunger:75,energy:80,hygiene:80,fun:65,social:55,day:1,hour:8,minute:0,goals:{eat:false,work:false,fun:false},message:'Welcome home! Explore your yard and try a few actions. Your story starts now.'};
+const saved=localStorage.getItem('littlelife-save-v1');
+if(saved){try{state={...state,...JSON.parse(saved),goals:{...state.goals,...JSON.parse(saved).goals}}}catch(e){}}
+const clamp=n=>Math.max(0,Math.min(100,n));
+function save(){localStorage.setItem('littlelife-save-v1',JSON.stringify(state))}
+function tell(msg){state.message=msg;document.getElementById('message').textContent=msg;const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._timer);t._timer=setTimeout(()=>t.style.display='none',2300);save()}
+function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
+function roundRect(x,y,w,h,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function text(s,x,y,size=14,color='#263044',align='left'){ctx.fillStyle=color;ctx.font=`bold ${size}px system-ui`;ctx.textAlign=align;ctx.fillText(s,x,y)}
+function drawTree(x,y){rect(x-4,y+10,8,22,'#956642');ctx.fillStyle='#4d9e6d';ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);ctx.fill();ctx.fillStyle='#6fbd7d';ctx.beginPath();ctx.arc(x-8,y-8,11,0,Math.PI*2);ctx.fill()}
+function drawWorld(){
+  ctx.clearRect(0,0,W,H);
+  // grassy yard and stepping path
+  rect(0,0,W,H,'#bfe4a9');rect(0,0,W,55,'#a8d995');
+  // subtle grass flecks
+  for(let i=0;i<95;i++){let x=(i*71)%W,y=(i*43)%H;if(y>60&&!(x>105&&x<520&&y>90&&y<360)){ctx.fillStyle=i%2?'#a9d796':'#d1edb8';ctx.fillRect(x,y,3,3)}}
+  // house floor and walls
+  roundRect(95,62,450,270,12,'#f7d9b4');rect(108,76,424,244,'#fff0d6');
+  rect(108,76,424,17,'#d58f6a');rect(108,76,17,244,'#d58f6a');rect(515,76,17,244,'#d58f6a');rect(108,303,424,17,'#d58f6a');
+  // room divisions and floor boards
+  rect(108,195,424,5,'#dfbd91');for(let y=110;y<300;y+=38)rect(130,y,380,2,'#f1dfc5');
+  // rug
+  roundRect(245,220,145,73,9,'#f3b7c2');roundRect(256,230,123,53,6,'#ffd5d9');
+  // bed
+  roundRect(130,105,105,70,9,'#8c9ee8');roundRect(136,110,92,24,6,'#fffaf0');roundRect(136,138,92,30,5,'#a9b7f2');
+  // nightstand
+  roundRect(241,111,34,35,5,'#bf8257');roundRect(246,116,24,12,3,'#e5bd80');ctx.fillStyle='#ffe07a';ctx.beginPath();ctx.arc(258,108,7,0,Math.PI*2);ctx.fill();
+  // sofa
+  roundRect(408,106,91,47,9,'#6ebca0');roundRect(414,111,36,36,7,'#a1d9bd');roundRect(455,111,37,36,7,'#a1d9bd');rect(413,149,7,8,'#956642');rect(489,149,7,8,'#956642');
+  // table
+  roundRect(422,210,75,48,8,'#d7a16c');roundRect(432,218,55,31,6,'#f4d3a4');ctx.fillStyle='#e9a85f';ctx.beginPath();ctx.arc(459,234,9,0,Math.PI*2);ctx.fill();ctx.fillStyle='#5da977';ctx.beginPath();ctx.arc(462,229,5,0,Math.PI*2);ctx.fill();
+  // kitchen counter
+  roundRect(293,102,83,38,6,'#9dc8ce');roundRect(301,108,67,25,4,'#eaf5ef');text('KITCHEN',334,95,10,'#93684d','center');
+  // shower/bath
+  roundRect(438,266,65,30,7,'#8bc8dd');roundRect(445,271,50,20,5,'#d9f6f7');text('BATH',470,261,9,'#4b8797','center');
+  // door
+  rect(302,312,44,20,'#a56e49');rect(308,314,32,18,'#c48a5c');ctx.fillStyle='#f6d16e';ctx.beginPath();ctx.arc(336,323,2,0,Math.PI*2);ctx.fill();
+  // garden outside
+  drawTree(55,112);drawTree(579,130);drawTree(575,385);drawTree(62,385);
+  roundRect(240,354,160,94,10,'#d8bd88');for(let y=362;y<443;y+=18)rect(248,y,144,2,'#c5a774');
+  // mailbox
+  rect(523,367,5,33,'#956642');roundRect(508,354,35,23,5,'#7aa4db');rect(513,359,25,5,'#d8e7fa');
+  // flower patches
+  for(let i=0;i<9;i++){let x=132+i*43,y=410+(i%2)*10;ctx.fillStyle='#4c9b61';ctx.fillRect(x,y,3,10);ctx.fillStyle=['#f49cb4','#f8d66d','#b9a5f7'][i%3];ctx.beginPath();ctx.arc(x+1,y,4,0,Math.PI*2);ctx.fill()}
+  // labels
+  text('BED',182,184,10,'#8a7b6c','center');text('LIVING ROOM',451,181,10,'#8a7b6c','center');text('YOUR YARD',320,466,11,'#64885a','center');
+  // player shadow, body, head
+  ctx.fillStyle='#00000018';ctx.beginPath();ctx.ellipse(state.x,state.y+15,15,6,0,0,Math.PI*2);ctx.fill();
+  // hair
+  ctx.fillStyle='#4b3025';ctx.beginPath();ctx.arc(state.x,state.y-12,12,Math.PI,Math.PI*2);ctx.fill();
+  // face
+  ctx.fillStyle='#bd8059';ctx.beginPath();ctx.arc(state.x,state.y-9,10,0,Math.PI*2);ctx.fill();
+  // hair cap
+  ctx.fillStyle='#4b3025';ctx.beginPath();ctx.arc(state.x,state.y-14,11,Math.PI,Math.PI*1.92);ctx.fill();rect(state.x-10,state.y-15,4,8,'#4b3025');
+  // eyes
+  ctx.fillStyle='#2b2730';ctx.fillRect(state.x-4,state.y-10,2,2);ctx.fillRect(state.x+3,state.y-10,2,2);
+  // shirt and legs
+  roundRect(state.x-11,state.y,22,21,6,'#56a9a0');rect(state.x-8,state.y+18,6,10,'#475b88');rect(state.x+2,state.y+18,6,10,'#475b88');roundRect(state.x-10,state.y+26,8,5,2,'#f4eee3');roundRect(state.x+2,state.y+26,8,5,2,'#f4eee3');
+  // character label
+  roundRect(state.x-37,state.y-44,74,18,8,'#fffdf2');text('Alex',state.x,state.y-31,10,'#263044','center');
+  // nearest object hint
+  const obj=nearestObject();if(obj&&obj.dist<65){roundRect(state.x-55,state.y+38,110,22,8,'#263044');text('E · '+obj.label,state.x,state.y+53,10,'#ffffff','center')}
+}
+function nearestObject(){const objs=[{x:180,y:140,label:'Rest',act:'sleep'},{x:330,y:120,label:'Kitchen',act:'eat'},{x:455,y:130,label:'Sofa',act:'fun'},{x:470,y:280,label:'Shower',act:'wash'},{x:460,y:235,label:'Table',act:'social'},{x:320,y:390,label:'Mailbox',act:'work'}];let best=null;for(const o of objs){const d=Math.hypot(state.x-o.x,state.y-o.y);if(!best||d<best.dist)best={...o,dist:d}}return best}
+function updateUI(){
+ document.getElementById('money').textContent='$'+state.money;
+ for(const key of ['hunger','energy','hygiene','fun','social']){document.getElementById(key+'Fill').style.width=state[key]+'%';document.getElementById(key+'Num').textContent=Math.round(state[key]);}
+ document.getElementById('timePill').textContent=`Day ${state.day} · ${String(state.hour).padStart(2,'0')}:${String(state.minute).padStart(2,'0')}`;
+ for(const k of ['eat','work','fun'])document.getElementById('goal'+k[0].toUpperCase()+k.slice(1)).textContent=state.goals[k]?'✓':'○';
+ document.getElementById('message').textContent=state.message;
+}
+function advance(min=20){let total=state.hour*60+state.minute+min;while(total>=1440){total-=1440;state.day++;state.goals={eat:false,work:false,fun:false};tell('A new day begins! Your little goals have refreshed.')}state.hour=Math.floor(total/60);state.minute=total%60;state.hunger=clamp(state.hunger-min*.035);state.energy=clamp(state.energy-min*.018);state.hygiene=clamp(state.hygiene-min*.012);state.fun=clamp(state.fun-min*.014);state.social=clamp(state.social-min*.01);updateUI();save()}
+function act(name){
+ if(name==='eat'){if(state.money<5){tell('You need $5 for a snack. Try a quick gig first!');return}state.money-=5;state.hunger=clamp(state.hunger+32);state.energy=clamp(state.energy+4);state.goals.eat=true;advance(10);tell('Yum! You had a snack. Hunger is feeling better. ($5)')}
+ if(name==='work'){if(state.energy<12){tell('You are too tired for a gig. Take a nap first.');return}state.money+=35;state.energy=clamp(state.energy-14);state.fun=clamp(state.fun-5);state.goals.work=true;advance(35);tell('Gig complete! You earned $35. Nice work!')}
+ if(name==='sleep'){state.energy=clamp(state.energy+38);state.hunger=clamp(state.hunger-8);advance(5);tell('A quick nap helped you recharge.')}
+ if(name==='wash'){state.hygiene=clamp(state.hygiene+38);advance(15);tell('Fresh and ready for the day!')}
+ if(name==='fun'){state.fun=clamp(state.fun+30);state.energy=clamp(state.energy-5);state.goals.fun=true;advance(20);tell('That was fun! Your mood is lifting.')}
+ if(name==='social'){state.social=clamp(state.social+28);advance(15);tell('You had a lovely chat with a friend.')}
+ updateUI();save();
+}
+function move(dx,dy){const speed=12;state.x=Math.max(22,Math.min(W-22,state.x+dx*speed));state.y=Math.max(38,Math.min(H-22,state.y+dy*speed));advance(1);drawWorld();save()}
+document.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].includes(e.key)){e.preventDefault();if(e.key==='ArrowUp'||e.key.toLowerCase()==='w')move(0,-1);if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')move(0,1);if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')move(-1,0);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')move(1,0)}if(e.key.toLowerCase()==='e'){const o=nearestObject();if(o&&o.dist<65)act(o.act);else tell('Walk closer to a nearby object, then press E.')}});
+document.querySelectorAll('[data-move]').forEach(b=>{const m=b.dataset.move;const run=()=>move(m==='left'?-1:m==='right'?1:0,m==='up'?-1:m==='down'?1:0);b.addEventListener('click',run);b.addEventListener('touchstart',e=>{e.preventDefault();run()},{passive:false})});
+document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>act(b.dataset.action)));
+canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect();const x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;state.x=x;state.y=y;advance(1);drawWorld();save()});
+document.getElementById('resetBtn').addEventListener('click',()=>{if(confirm('Start a new day and reset your Ekiti Lifestyle progress?')){state={x:320,y:315,money:120,hunger:75,energy:80,hygiene:80,fun:65,social:55,day:1,hour:8,minute:0,goals:{eat:false,work:false,fun:false},message:'A fresh start! What will you do today?'};save();updateUI();drawWorld();tell('A fresh new life begins!')}})
+updateUI();drawWorld();
+})();
+</script>
+
+<div style="max-width:980px;margin:12px auto 24px;padding:10px 14px;border-radius:14px;background:#f2f8f2;color:#315b42;font:14px/1.5 system-ui,sans-serif;text-align:center;">
+  <strong>Ekiti Lifestyle · Prototype 0.1</strong> — An original, single-player 2D game. This first build uses an Ekiti-inspired neighbourhood; more locations, jobs, culture and activities can be added as we develop it.
+</div>
+
+</body>
+</html>
