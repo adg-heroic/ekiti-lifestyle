@@ -168,6 +168,9 @@ function App() {
 
     const clock = new THREE.Clock();
     const target = new THREE.Vector3();
+    const cameraRay = new THREE.Raycaster();
+    const cameraDirection = new THREE.Vector3();
+    const cameraPosition = new THREE.Vector3();
     let frame = 0;
     let lastUi = 0;
     let active = true;
@@ -214,7 +217,15 @@ function App() {
       }
       target.set(player.position.x, 1.2, player.position.z);
       const desiredCamera = new THREE.Vector3(player.position.x, player.position.y + 7, player.position.z + 10);
-      camera.position.lerp(desiredCamera, 1 - Math.exp(-5 * delta));
+      cameraDirection.copy(desiredCamera).sub(target).normalize();
+      cameraRay.set(target, cameraDirection);
+      cameraRay.far = 10;
+      const cameraHits = cameraRay.intersectObjects(scene.children, true)
+        .filter((hit) => hit.distance > 1.35 && hit.object !== player);
+      // Pull the camera forward when a wall, tree or roof blocks the follow view.
+      const safeDistance = cameraHits.length ? Math.max(3.2, cameraHits[0].distance - 0.75) : 10;
+      cameraPosition.copy(target).addScaledVector(cameraDirection, safeDistance);
+      camera.position.lerp(cameraPosition, 1 - Math.exp(-7 * delta));
       camera.lookAt(target);
       renderer.render(scene, camera);
 
