@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 type Move = { x: number; z: number };
-type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean };
+type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean };
+type Needs = { hunger: number; thirst: number; energy: number; hygiene: number };
 
 function makeMaterial(color: string, roughness = 1) {
   return new THREE.MeshStandardMaterial({ color, roughness });
@@ -116,11 +117,32 @@ function App() {
   const cameraLookRef = useRef({ yaw: 0, pitch: 0.62 });
   const moveRef = useRef<Move>({ x: 0, z: 0 });
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
-  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false });
+  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false, nearHome: false });
   const [shopOpen, setShopOpen] = useState(false);
+  const [homeOpen, setHomeOpen] = useState(false);
+  const [needs, setNeeds] = useState<Needs>({ hunger: 82, thirst: 78, energy: 90, hygiene: 88 });
   const [wallet, setWallet] = useState(12000);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const shopItems = [{ id: 'water', name: 'Cold sachet water', detail: 'A quick refreshment', price: 100, emoji: '💧' }, { id: 'snack', name: 'Local snacks', detail: 'A small street-side bite', price: 350, emoji: '🥟' }, { id: 'softdrink', name: 'Soft drink', detail: 'Chilled bottle', price: 500, emoji: '🥤' }, { id: 'fruit', name: 'Fresh fruit', detail: 'Seasonal fruit portion', price: 250, emoji: '🍊' }];
+  const performHomeAction = (action: 'sleep' | 'shower' | 'cook') => {
+    if (action === 'sleep') {
+      setNeeds((n) => ({ ...n, energy: 100, hunger: Math.max(0, n.hunger - 12), thirst: Math.max(0, n.thirst - 12) }));
+      setStatus((s) => ({ ...s, message: 'You had a good rest. Energy restored!' }));
+    } else if (action === 'shower') {
+      setNeeds((n) => ({ ...n, hygiene: 100, energy: Math.max(0, n.energy - 4) }));
+      setStatus((s) => ({ ...s, message: 'Fresh and clean. Hygiene restored!' }));
+    } else {
+      const ingredient = (inventory.snack || 0) > 0 ? 'snack' : (inventory.fruit || 0) > 0 ? 'fruit' : '';
+      if (!ingredient) {
+        setStatus((s) => ({ ...s, message: 'You need local snacks or fresh fruit from the kiosk to cook.' }));
+        return;
+      }
+      setInventory((items) => ({ ...items, [ingredient]: Math.max(0, (items[ingredient] || 0) - 1) }));
+      setNeeds((n) => ({ ...n, hunger: Math.min(100, n.hunger + 48), energy: Math.max(0, n.energy - 3) }));
+      setStatus((s) => ({ ...s, message: 'Meal ready! Your hunger has eased.' }));
+    }
+  };
+
   const buyItem = (item: typeof shopItems[number]) => {
     if (wallet < item.price) return;
     setWallet((cash) => cash - item.price);
@@ -211,6 +233,7 @@ function App() {
     const cameraPosition = new THREE.Vector3();
     let frame = 0;
     let lastUi = 0;
+    let lastNeedsTick = 0;
     let active = true;
     const keys = new Set<string>();
     const onKeyDown = (event: KeyboardEvent) => {
@@ -294,7 +317,12 @@ function App() {
       if (performance.now() - lastUi > 250) {
         lastUi = performance.now();
         const nearKiosk = player.position.distanceTo(kiosk) < 3.2;
-        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk }));
+        const nearHome = Math.hypot(player.position.x, player.position.z + 1.7) < 2.8;
+        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome }));
+      }
+      if (elapsed - lastNeedsTick >= 5) {
+        lastNeedsTick = elapsed;
+        setNeeds((n) => ({ hunger: Math.max(0, n.hunger - 0.18), thirst: Math.max(0, n.thirst - 0.24), energy: Math.max(0, n.energy - 0.12), hygiene: Math.max(0, n.hygiene - 0.10) }));
       }
     };
     animate();
@@ -376,7 +404,10 @@ function App() {
         <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div>
         <div className="player-card"><div className="player-avatar">👤</div><div><b>Dami</b><small>New resident</small></div><span className="cash">₦{wallet.toLocaleString("en-NG")}</span></div>
         <div className="world-tip">{status.message}</div>
+        <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
+        {status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏠 HOME <span>Tap to take care of yourself</span></button>}
+        {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>Take care of yourself</h2><p>Rest, freshen up or prepare a meal.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button></div><div className="home-inventory">In your bag: {inventory.snack || 0} snacks · {inventory.fruit || 0} fruit</div></section></div>}
         {shopOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label="Neighbourhood kiosk"><div className="shop-heading"><div><small>ADO-EKITI · STREET KIOSK</small><h2>Neighbourhood Store</h2><p>Pick up something for the road.</p></div><button className="shop-close" onClick={() => setShopOpen(false)} aria-label="Close shop">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString("en-NG")}</strong></div><div className="shop-items">{shopItems.map((item) => <article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id] || 0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString("en-NG")}</strong><button onClick={() => buyItem(item)} disabled={wallet < item.price}>BUY</button></div></article>)}</div><p className="shop-note">Prototype purchases update your demo wallet and bag for this session.</p></section></div> }
         <div className="touch-controls" aria-label="Virtual joystick movement control">
           <div
