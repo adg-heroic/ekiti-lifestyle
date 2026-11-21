@@ -504,21 +504,6 @@ function App() {
   const [weather, setWeather] = useState<'sunny' | 'rainy'>('sunny');
   const weatherRef = useRef<'sunny' | 'rainy'>('sunny');
   useEffect(() => { weatherRef.current = weather; }, [weather]);
-  useEffect(() => { selectedVehicleRef.current = selectedVehicleId; }, [selectedVehicleId]);
-  useEffect(() => { vehicleDrivingRef.current = vehicleDriving; }, [vehicleDriving]);
-  useEffect(() => {
-    const selected = ownedVehicles.find((vehicle) => vehicle.modelId === selectedVehicleId);
-    vehicleEngineLevelRef.current = selected?.upgrades.engine ?? 0;
-    vehicleTyreLevelRef.current = selected?.upgrades.tyres ?? 0;
-    vehicleHandlingLevelRef.current = selected?.upgrades.handling ?? 0;
-  }, [ownedVehicles, selectedVehicleId]);
-  useEffect(() => { try { localStorage.setItem('ekiti-owned-vehicles-v1', JSON.stringify(ownedVehicles)); if (selectedVehicleId) localStorage.setItem('ekiti-selected-vehicle-v1', selectedVehicleId); else localStorage.removeItem('ekiti-selected-vehicle-v1'); } catch { /* Garage saves are local to this device. */ } }, [ownedVehicles, selectedVehicleId]);
-  useEffect(() => {
-    Object.entries(vehicleGroupsRef.current).forEach(([id, group]) => {
-      const owned = ownedVehicles.some((vehicle) => vehicle.modelId === id);
-      group.visible = owned;
-    });
-  }, [ownedVehicles, selectedVehicleId, vehicleDriving]);
   const [autoTravel, setAutoTravel] = useState(false);
   const [homeActivity, setHomeActivity] = useState('');
   const [homeTask, setHomeTask] = useState<HomeActivityTask | null>(null);
@@ -546,6 +531,21 @@ function App() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(() => { try { return localStorage.getItem('ekiti-selected-vehicle-v1'); } catch { return null; } });
   const [garageOpen, setGarageOpen] = useState(false);
   const [vehicleDriving, setVehicleDriving] = useState(false);
+  useEffect(() => { selectedVehicleRef.current = selectedVehicleId; }, [selectedVehicleId]);
+  useEffect(() => { vehicleDrivingRef.current = vehicleDriving; }, [vehicleDriving]);
+  useEffect(() => {
+    const selected = ownedVehicles.find((vehicle) => vehicle.modelId === selectedVehicleId);
+    vehicleEngineLevelRef.current = selected?.upgrades.engine ?? 0;
+    vehicleTyreLevelRef.current = selected?.upgrades.tyres ?? 0;
+    vehicleHandlingLevelRef.current = selected?.upgrades.handling ?? 0;
+  }, [ownedVehicles, selectedVehicleId]);
+  useEffect(() => { try { localStorage.setItem('ekiti-owned-vehicles-v1', JSON.stringify(ownedVehicles)); if (selectedVehicleId) localStorage.setItem('ekiti-selected-vehicle-v1', selectedVehicleId); else localStorage.removeItem('ekiti-selected-vehicle-v1'); } catch { /* Garage saves are local to this device. */ } }, [ownedVehicles, selectedVehicleId]);
+  useEffect(() => {
+    Object.entries(vehicleGroupsRef.current).forEach(([id, group]) => {
+      const owned = ownedVehicles.some((vehicle) => vehicle.modelId === id);
+      group.visible = owned;
+    });
+  }, [ownedVehicles, selectedVehicleId, vehicleDriving]);
   const [lifeHubOpen, setLifeHubOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileTab, setProfileTab] = useState<'overview' | 'needs' | 'skills' | 'people' | 'career' | 'goals'>('overview');
