@@ -158,3 +158,23 @@ button{font:inherit}
 .community-activities{display:grid;gap:8px;margin-top:16px}.community-activities>h3{margin:0 0 2px;color:#f1d08c;font-size:12px}.community-activity{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #ffffff20;border-radius:11px;background:#ffffff08}.community-activity-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:#d6a85e18;font-size:21px}.community-activity>div{flex:1;min-width:0}.community-activity b,.community-activity small{display:block}.community-activity b{font-size:10px}.community-activity small{margin-top:4px;color:#aebeb1;font-size:9px;line-height:1.4}.community-activity button{border:0;border-radius:8px;padding:8px 11px;background:#d6a85e;color:#1b281f;font-size:8px;font-weight:900;cursor:pointer}.community-activity button:disabled{border:1px solid #ffffff20;background:#ffffff0b;color:#91a095;cursor:not-allowed}
 .community-footnote{margin:12px 0 0;color:#91a095;font-size:9px;line-height:1.5}
 @media(max-width:700px){.community-toggle{padding:8px 7px;font-size:7px}.community-panel{padding:15px;border-radius:16px}.community-score{gap:5px}.community-score>div{padding:8px}.community-score small{font-size:7px}.community-score strong{font-size:15px}.community-event-art{padding:11px}.community-event-art>span{width:46px;height:46px;font-size:25px}.community-event-art small{font-size:8px}.community-event-copy{padding:11px}.community-event-copy h3{font-size:17px}.community-event-copy p{font-size:10px}.community-activity{gap:7px;padding:8px}.community-activity-icon{width:32px;height:32px;font-size:18px}.community-activity b{font-size:9px}.community-activity small{font-size:8px}.community-activity button{padding:8px;font-size:8px}}
+
+/* Task 4 · player character studio */
+.wardrobe-toggle{border:1px solid #b9d6c088;border-radius:10px;padding:10px 12px;background:#83c78b18;color:#c6e4c2;font-size:9px;font-weight:900;letter-spacing:.6px;cursor:pointer;white-space:nowrap}
+.wardrobe-panel{width:min(560px,96vw);max-height:92%;overflow:auto;border:1px solid #ffffff2b;border-radius:20px;padding:22px;background:linear-gradient(160deg,#293e32,#14231d 75%);box-shadow:0 24px 70px #0009;color:#f5f2e9}
+.wardrobe-name{display:grid;gap:7px;margin:17px 0;color:#d6b77e;font-size:9px;font-weight:900;letter-spacing:1px}
+.wardrobe-name input{width:100%;box-sizing:border-box;border:1px solid #ffffff30;border-radius:10px;padding:12px;background:#0e1b16;color:#f5f2e9;font:inherit;letter-spacing:0}
+.wardrobe-section{margin-top:14px;padding:13px;border:1px solid #ffffff1c;border-radius:12px;background:#ffffff08}
+.wardrobe-section>b{display:block;margin-bottom:10px;color:#d6b77e;font-size:9px;letter-spacing:1px}
+.wardrobe-swatches{display:flex;flex-wrap:wrap;gap:10px}
+.wardrobe-swatches button{width:34px;height:34px;border:2px solid #ffffff50;border-radius:50%;cursor:pointer}
+.wardrobe-swatches button.chosen{outline:2px solid #f1d08c;outline-offset:3px}
+.wardrobe-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.wardrobe-options button{display:grid;justify-items:center;gap:5px;padding:10px 5px;border:1px solid #ffffff24;border-radius:10px;background:#ffffff08;color:#f5f2e9;font-size:9px;cursor:pointer}
+.wardrobe-options button span{font-size:22px}
+.wardrobe-options button.chosen{border-color:#d6a85e;background:#d6a85e22;color:#f1d08c}
+.wardrobe-footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:17px}
+.wardrobe-footer>span{flex:1 1 100%;color:#aebeb1;font-size:9px}
+.wardrobe-footer button{border:1px solid #ffffff28;border-radius:9px;padding:11px;background:#ffffff0b;color:#f1e8d7;font-size:9px;font-weight:900;cursor:pointer}
+.wardrobe-footer .wardrobe-done{border-color:#d6a85e;background:#d6a85e;color:#1b281f}
+@media(max-width:700px){.wardrobe-toggle{padding:8px 7px;font-size:8px}.wardrobe-panel{padding:15px;border-radius:16px}.wardrobe-options{gap:5px}.wardrobe-options button{font-size:8px;padding:9px 3px}.wardrobe-swatches{gap:9px}.wardrobe-swatches button{width:31px;height:31px}}
