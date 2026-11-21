@@ -698,7 +698,7 @@ function App() {
       braid.rotation.z = side * -0.1; braids.add(braid);
     }
     styleGroup.add(braids); player.add(styleGroup); styleGroup.visible = false;
-    player.userData.lookParts = { skin, shirt, trousers, shoeMaterial, hair, styleHairMaterial, styleGroup, afro, fadeTop, braids };
+    player.userData.lookParts = { skin, shirt, trousers, shoeMaterial, hair: hair.material, styleHairMaterial, styleGroup, afro, fadeTop, braids };
     player.position.set(0, 0, 12);
     scene.add(player);
     playerRef.current = player;
