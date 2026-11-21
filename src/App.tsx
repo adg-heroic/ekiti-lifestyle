@@ -51,7 +51,7 @@ function makeVehicleModel(color: string) {
   cabin.position.set(-0.08, 1.28, 0); cabin.castShadow = true; group.add(cabin);
   const wheels: THREE.Mesh[] = [];
   for (const wx of [-0.78, 0.82]) for (const wz of [-0.72, 0.72]) {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.16, 12), makeMaterial('#242625));
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.16, 12), makeMaterial('#242625'));
     wheel.rotation.x = Math.PI / 2; wheel.position.set(wx, 0.32, wz); group.add(wheel); wheels.push(wheel);
   }
   for (const wz of [-0.43, 0.43]) {
@@ -508,7 +508,6 @@ function App() {
     Object.entries(vehicleGroupsRef.current).forEach(([id, group], index) => {
       const owned = ownedVehicles.some((vehicle) => vehicle.modelId === id);
       group.visible = owned;
-      if (id !== selectedVehicleId || !vehicleDriving) group.position.set(-21 + index * 3, 0, 15.2);
     });
   }, [ownedVehicles, selectedVehicleId, vehicleDriving]);
   const [autoTravel, setAutoTravel] = useState(false);
@@ -763,7 +762,7 @@ function App() {
     vehicleDrivingRef.current = false;
     setVehicleDriving(false);
     playerRef.current.visible = true;
-    playerRef.current.position.set(-26, 0, 15.2);
+    playerRef.current.position.set(-25, 0, 15.2);
     if (car) { car.position.set(-18, 0, 15.2); car.rotation.y = 0; car.visible = true; }
     setStatus((v) => ({ ...v, message: 'Vehicle parked safely in your garage.' }));
   };
@@ -1024,7 +1023,7 @@ function App() {
     vehicleCatalog.forEach((vehicle, index) => {
       const model = makeVehicleModel(vehicle.color);
       model.position.set(-21 + index * 3, 0, 15.2);
-      model.visible = false;
+      model.visible = ownedVehicles.some((item) => item.modelId === vehicle.id);
       scene.add(model);
       vehicleGroupsRef.current[vehicle.id] = model;
     });
