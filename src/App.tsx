@@ -383,7 +383,7 @@ function App() {
     // Distinct stylized residents: original Nigerian street characters with varied faces, hair and outfits.
     const pedestrians = [0, 1, 2, 3, 4].map((index) => {
       const resident = buildResident(index);
-      resident.position.set(-38 + index * 15, 0, index % 2 === 0 ? -7.1 : -13.0);
+      resident.position.set(-8 + index * 4, 0, index % 2 === 0 ? 8.2 : 10.4);
       scene.add(resident);
       return resident;
     });
@@ -427,16 +427,53 @@ function App() {
           phase: number; speed: number; leftLeg: THREE.Group; rightLeg: THREE.Group;
           leftArm: THREE.Group; rightArm: THREE.Group;
         };
+        const profile = resident.userData.profile as ResidentProfile;
         const progress = ((elapsed * speed + phase) % 2);
-        const travel = progress <= 1 ? progress : 2 - progress;
-        const gait = Math.sin(elapsed * 7 + phase * 12);
-        resident.position.x = -39 + travel * 78;
-        resident.rotation.y = progress <= 1 ? Math.PI / 2 : -Math.PI / 2;
+        const laneZ = profile.id % 2 === 0 ? 8.2 : 10.4;
+        const playerDistance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
+        const nearbyPerson = pedestrians.some((other) => other !== resident &&
+          Math.hypot(other.position.x - resident.position.x, other.position.z - resident.position.z) < 1.05);
+        const shouldPause = playerDistance < 2.7 || nearbyPerson;
+        const facingPlayer = playerDistance < 2.7;
+        let gait = 0;
+
+        if (facingPlayer) {
+          // Residents acknowledge the player and leave enough space for a natural conversation.
+          resident.rotation.y = Math.atan2(player.position.x - resident.position.x, player.position.z - resident.position.z);
+        } else if (!nearbyPerson) {
+          const directionX = progress <= 1 ? 1 : -1;
+          const step = directionX * 24 * speed * delta;
+          const nextX = resident.position.x + step;
+          const blockedAt = (x: number, z: number) => colliders.some((obstacle) =>
+            Math.abs(x - obstacle.x) < obstacle.halfX + 0.48 &&
+            Math.abs(z - obstacle.z) < obstacle.halfZ + 0.48
+          );
+          const nextZ = THREE.MathUtils.damp(resident.position.z, laneZ, 3.5, delta);
+          if (!blockedAt(nextX, nextZ)) {
+            resident.position.x = nextX;
+            resident.position.z = nextZ;
+          } else {
+            // Try either side of the obstruction rather than walking through a building or kiosk.
+            const detours = [laneZ - 1.5, laneZ + 1.5].filter((z) => !blockedAt(resident.position.x, z) && !blockedAt(nextX, z));
+            if (detours.length) {
+              const detourZ = detours.reduce((best, z) => Math.abs(z - laneZ) < Math.abs(best - laneZ) ? z : best);
+              resident.position.z = THREE.MathUtils.damp(resident.position.z, detourZ, 4, delta);
+              if (!blockedAt(nextX, resident.position.z)) resident.position.x = nextX;
+            } else {
+              // If there is no safe route, turn around and try the other direction next frame.
+              resident.rotation.y = directionX > 0 ? -Math.PI / 2 : Math.PI / 2;
+            }
+          }
+          if (!blockedAt(resident.position.x, resident.position.z)) {
+            resident.rotation.y = directionX > 0 ? Math.PI / 2 : -Math.PI / 2;
+          }
+          gait = Math.sin(elapsed * 7 + phase * 12);
+        }
         leftLeg.rotation.x = gait * 0.38;
         rightLeg.rotation.x = -gait * 0.38;
         leftArm.rotation.x = -gait * 0.2;
         rightArm.rotation.x = gait * 0.2;
-        resident.position.y = Math.abs(gait) * 0.018;
+        resident.position.y = shouldPause ? 0 : Math.abs(gait) * 0.018;
       });
       // Translate movement into the camera's horizontal facing direction.
       // This keeps joystick-forward moving toward the centre of the view after the player rotates the camera.
@@ -493,7 +530,7 @@ function App() {
         if (!isInsideRef.current) {
           for (const resident of pedestrians) {
             const distance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
-            if (distance < 4.1 && (!closest || distance < closest.distance)) {
+            if (distance < 5.8 && (!closest || distance < closest.distance)) {
               closest = { profile: resident.userData.profile as ResidentProfile, distance };
             }
           }
