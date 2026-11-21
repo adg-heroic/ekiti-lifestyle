@@ -277,12 +277,67 @@ function buildWorld(scene: THREE.Scene) {
   shop(7, -18, '#d8bd91', '#e7c37e');
 
   // Trees are kept out of the street corridor and have simple no-walk zones.
-  const treeSpots = [[-18,-3],[18,-3],[-40,-13],[-35,-8],[-13,-17],[14,-17],[39,-14],[-40,-34],[-13,-37],[13,-36],[39,-34],[-18,12],[19,12],[-8,17],[9,17]] as number[][];
+  const treeSpots = [[-18,-3],[18,-3],[-40,-13],[-35,-8],[-13,-17],[14,-17],[39,-14],[-13,-37],[-18,12],[19,12],[-8,17],[9,17]] as number[][];
   for (const [x, z] of treeSpots) { addTree(scene, x, z); block(x, z, 1.8, 1.8); }
 
-  // Three full-size market compounds in one walkable commercial district.
-  const market=(x:number,z:number,accent:string)=>{addBox(scene,x,0,z,8.5,2.8,7.2,'#c9a47b');addBox(scene,x,2.85,z,9.2,0.22,7.8,accent);addBox(scene,x,1.5,z-3.68,8.6,0.42,0.12,'#f0d9a5');for(let i=-3;i<=3;i+=2){addBox(scene,x+i,0.65,z-3.82,1.45,1.15,0.12,'#9a6544');addBox(scene,x+i,1.45,z-3.8,1.5,0.12,0.12,'#f3dfad');}for(let i=-2;i<=2;i+=2){addBox(scene,x+i,0.6,z+1,1.5,1.1,1.2,'#a8754b');addBox(scene,x+i,1.2,z+1,1.45,0.12,1.15,'#d6b16d');}};
-  market(12,-43,'#b65d42'); market(22,-43,'#397c70'); market(32,-43,'#a77b42');
+  // Three substantial, separate Ado-Ekiti market compounds with open walkways.
+  // Each site has a clear entrance, multiple covered stall rows, counters, goods displays and traders.
+  const marketSites = [
+    { name: 'Oja Oba (Erekesan)', x: -40, z: -45, accent: '#a94f3c', sign: '#f0d5a0', type: 0 },
+    { name: 'Oja Bisi', x: 10, z: -45, accent: '#397b70', sign: '#f3d48c', type: 1 },
+    { name: 'Oja Irona', x: 40, z: -45, accent: '#9a713b', sign: '#f2d8ad', type: 2 }
+  ];
+  // Access roads connect the market district to the main Ado-Ekiti street.
+  for (const roadX of [-47, 5, 40]) {
+    addBox(scene, roadX, 0.012, -27, 4.8, 0.045, 34, '#555b59');
+    addBox(scene, roadX, 0.045, -27, 0.11, 0.02, 34, '#e9d9a8');
+  }
+  addBox(scene,-43.5,0.012,-44,7.2,0.045,4.8,'#555b59');
+  addBox(scene,7.5,0.012,-44,7.2,0.045,4.8,'#555b59');
+  for(const marketX of [-40,10,40]) addBox(scene,marketX,0.012,-51,4.8,0.045,8,'#555b59');
+  const market = (x:number,z:number,accent:string,sign:string,type:number) => {
+    // A broad paved trading compound and a recognisable entrance frontage.
+    addBox(scene,x,0.012,z,23,0.055,20,'#bcae91');
+    addBox(scene,x-11.1,0.55,z,0.35,1.1,19,'#b68d64');
+    addBox(scene,x+11.1,0.55,z,0.35,1.1,19,'#b68d64');
+    addBox(scene,x,0.55,z+9.5,22,1.1,0.35,'#b68d64');
+    // Main gate pillars and a large market name board.
+    for (const gx of [x-4.8,x+4.8]) addBox(scene,gx,1.25,z-10,0.65,2.5,0.65,'#e0c69c');
+    addBox(scene,x,3.15,z-10,10.5,0.75,0.45,accent);
+    addBox(scene,x,3.18,z-9.73,9.5,0.12,0.08,sign);
+    // Three long covered rows, each with four separately recognisable stalls.
+    for (let row=0;row<2;row++) {
+      const rowZ=z-4.5+row*9;
+      addBox(scene,x,3.15,rowZ,19.2,0.22,3.8,accent);
+      for (let col=0;col<4;col++) {
+        const sx=x-7.2+col*4.8;
+        addBox(scene,sx,1.15,rowZ,3.7,0.22,2.25,'#8a573b');
+        block(sx,rowZ,3.8,2.35);
+        addBox(scene,sx,1.65,rowZ-1.05,3.75,0.16,0.18,sign);
+        addBox(scene,sx-1.72,2.05,rowZ-1.85,0.16,2.1,0.18,accent);
+        addBox(scene,sx+1.72,2.05,rowZ-1.85,0.16,2.1,0.18,accent);
+        // Small produce / merchandise display crates on the counter.
+        const goods = type===0 ? ['#b65d42','#d49a38','#7c9c4b'] : type===1 ? ['#c16b8c','#3d7891','#d3a34f'] : ['#718b62','#a8794e','#9b9b9b'];
+        for(let g=0;g<3;g++) addBox(scene,sx-0.9+g*0.9,1.52,rowZ-0.25,0.62,0.55,0.55,goods[g]);
+      }
+      // Vendor characters stand behind the counter at alternating stalls.
+      for(let vendor=0;vendor<2;vendor++){
+        const person=buildResident((type*2+row+vendor)%5);
+        person.position.set(x-5.0+vendor*9.6,0,rowZ+0.65);
+        person.rotation.y=Math.PI;
+        scene.add(person);
+      }
+    }
+    // Open central aisles remain wide enough for the player to walk and browse.
+    for (let p=0;p<5;p++) {
+      const postX=x-9.5+p*4.75;
+      addBox(scene,postX,1.8,z-8.0,0.18,3.6,0.18,'#75523c');
+      addBox(scene,postX,1.8,z+8.0,0.18,3.6,0.18,'#75523c');
+    }
+    addBox(scene,x,3.65,z-8.0,20,0.18,4.2,accent);
+    addBox(scene,x,3.65,z+8.0,20,0.18,4.2,accent);
+  };
+  marketSites.forEach((site)=>market(site.x,site.z,site.accent,site.sign,site.type));
   // Campus compounds for UNAD and Ado Polytechnic.
   const campus=(x:number,z:number,wall:string)=>{addBox(scene,x,0,z,13,2.4,9,wall);addBox(scene,x,2.5,z,13.6,0.2,9.5,'#a9573e');block(x-3,z,4.3,5.8);block(x+3,z,4.3,5.8);addBox(scene,x,1.2,z-4.8,5.8,2.1,0.35,'#e9d9bd');addBox(scene,x,2.35,z-4.85,6,0.28,0.45,'#d6a85e');addBox(scene,x-3,0,z,4.3,3.1,5.8,'#d6d0bd');addBox(scene,x+3,0,z,4.3,3.1,5.8,'#c4c9bd');};
   campus(-34,-30,'#d5c49f'); campus(-13,-39,'#c9b99a');
@@ -352,11 +407,11 @@ function App() {
   }, [jobWorking]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const shopItems = [{ id: 'water', name: 'Cold sachet water', detail: 'A quick refreshment', price: 100, emoji: '💧' }, { id: 'snack', name: 'Local snacks', detail: 'A small street-side bite', price: 350, emoji: '🥟' }, { id: 'softdrink', name: 'Soft drink', detail: 'Chilled bottle', price: 500, emoji: '🥤' }, { id: 'fruit', name: 'Fresh fruit', detail: 'Seasonal fruit portion', price: 250, emoji: '🍊' }];
-  const marketNames = ['Oja Oba Market', 'Bisi Market', 'New Garage Market'];
+  const marketNames = ['Oja Oba (Erekesan)', 'Oja Bisi', 'Oja Irona'];
   const marketProducts = [
-    [{id:'market-rice',name:'Local rice (1 mudu)',detail:'Freshly measured staple food',price:1800,emoji:'🍚'},{id:'market-beans',name:'Beans (1 mudu)',detail:'Clean brown beans',price:1600,emoji:'🫘'},{id:'market-garri',name:'Ijebu garri',detail:'A market staple',price:900,emoji:'🥣'},{id:'market-tomato',name:'Fresh tomatoes',detail:'A small basket',price:1200,emoji:'🍅'}],
-    [{id:'market-shirt',name:'Everyday shirt',detail:'Ready-to-wear clothing',price:4500,emoji:'👕'},{id:'market-fabric',name:'Ankara fabric',detail:'Colourful printed fabric',price:8500,emoji:'🧵'},{id:'market-sandals',name:'Leather sandals',detail:'Locally made footwear',price:6000,emoji:'🩴'},{id:'market-cap',name:'Traditional cap',detail:'Aso-oke style cap',price:3200,emoji:'🧢'}],
-    [{id:'market-soap',name:'Laundry soap',detail:'Household cleaning',price:850,emoji:'🧼'},{id:'market-bucket',name:'Plastic bucket',detail:'Useful home essential',price:2200,emoji:'🪣'},{id:'market-pan',name:'Cooking pot',detail:'Kitchen cookware',price:6500,emoji:'🍲'},{id:'market-broom',name:'Local broom',detail:'Handmade household broom',price:700,emoji:'🧹'}]
+    [{id:'market-rice',name:'Local rice (1 mudu)',detail:'Freshly measured staple food',price:1800,emoji:'🍚'},{id:'market-beans',name:'Beans (1 mudu)',detail:'Clean brown beans',price:1600,emoji:'🫘'},{id:'market-garri',name:'Ijebu garri',detail:'A market staple',price:900,emoji:'🥣'},{id:'market-tomato',name:'Fresh tomatoes',detail:'A small basket',price:1200,emoji:'🍅'},{id:'market-yam',name:'Yam tuber',detail:'Fresh farm produce',price:2500,emoji:'🍠'},{id:'market-pepper',name:'Fresh pepper',detail:'Ata rodo and tatashe',price:700,emoji:'🌶️'},{id:'market-palm-oil',name:'Palm oil bottle',detail:'Locally processed palm oil',price:1800,emoji:'🫙'},{id:'market-fish',name:'Smoked fish',detail:'Dried market fish',price:2200,emoji:'🐟'}],
+    [{id:'market-shirt',name:'Everyday shirt',detail:'Ready-to-wear clothing',price:4500,emoji:'👕'},{id:'market-fabric',name:'Ankara fabric',detail:'Colourful printed fabric',price:8500,emoji:'🧵'},{id:'market-sandals',name:'Leather sandals',detail:'Locally made footwear',price:6000,emoji:'🩴'},{id:'market-cap',name:'Traditional cap',detail:'Aso-oke style cap',price:3200,emoji:'🧢'},{id:'market-wrapper',name:'Women wrapper',detail:'Printed fabric wrapper',price:7000,emoji:'🧣'},{id:'market-bag',name:'Market bag',detail:'Reusable shopping bag',price:1200,emoji:'👜'},{id:'market-shoes',name:'Casual shoes',detail:'Everyday footwear',price:9500,emoji:'👞'},{id:'market-beads',name:'Coral-style beads',detail:'Traditional accessories',price:3800,emoji:'📿'}],
+    [{id:'market-soap',name:'Laundry soap',detail:'Household cleaning',price:850,emoji:'🧼'},{id:'market-bucket',name:'Plastic bucket',detail:'Useful home essential',price:2200,emoji:'🪣'},{id:'market-pan',name:'Cooking pot',detail:'Kitchen cookware',price:6500,emoji:'🍲'},{id:'market-broom',name:'Local broom',detail:'Handmade household broom',price:700,emoji:'🧹'},{id:'market-plate',name:'Plastic plates set',detail:'Everyday kitchenware',price:2800,emoji:'🍽️'},{id:'market-chair',name:'Plastic chair',detail:'Home and shop furniture',price:7500,emoji:'🪑'},{id:'market-lantern',name:'Rechargeable lantern',detail:'Useful during power cuts',price:12000,emoji:'🏮'},{id:'market-basket',name:'Woven basket',detail:'Handmade market basket',price:2400,emoji:'🧺'}]
   ];
   const performHomeAction = (action: 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie') => {
     homeActivityRef.current=action; setHomeActivity(action);
@@ -660,8 +715,8 @@ function App() {
       if (performance.now() - lastUi > 250) {
         lastUi = performance.now();
         const nearKiosk = !isInsideRef.current && player.position.distanceTo(kiosk) < 3.2;
-        const marketPoints = [[12,-43],[22,-43],[32,-43]] as const;
-        const marketIndex = !isInsideRef.current ? marketPoints.findIndex(([x,z]) => Math.hypot(player.position.x-x,player.position.z-z)<7.2) : -1;
+        const marketPoints = [[-40,-45],[10,-45],[40,-45]] as const;
+        const marketIndex = !isInsideRef.current ? marketPoints.findIndex(([x,z]) => Math.hypot(player.position.x-x,player.position.z-z)<14) : -1;
         const campusPoints = [{name:'UNAD',x:-34,z:-30},{name:'Ado Poly',x:-13,z:-39}];
         const campus = !isInsideRef.current ? campusPoints.find(({x,z})=>Math.hypot(player.position.x-x,player.position.z-z)<9)?.name ?? '' : '';
         const nearJob = !isInsideRef.current && Math.hypot(player.position.x + 7.5, player.position.z + 4.2) < 4.2;
@@ -773,7 +828,7 @@ function App() {
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
         {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); homeActivityRef.current=''; setHomeActivity(''); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
         {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); homeActivityRef.current=''; setHomeActivity(''); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
-        {mapOpen && <div className="shop-backdrop" role="presentation"><section className="city-map-panel" role="dialog" aria-modal="true" aria-label="Ado-Ekiti city map"><div className="shop-heading"><div><small>EKITI LIFESTYLE · CITY NAVIGATION</small><h2>Ado-Ekiti Map</h2><p>Tap the map or a destination to walk there automatically.</p></div><button className="shop-close" onClick={()=>setMapOpen(false)}>×</button></div><div className="city-map-canvas" onClick={(e)=>{const r=e.currentTarget.getBoundingClientRect();autoDestinationRef.current={x:-45+(e.clientX-r.left)/r.width*90,z:22-(e.clientY-r.top)/r.height*70};autoPathRef.current=[];autoPathIndexRef.current=0;setAutoTravel(true);setMapOpen(false);setStatus((v)=>({...v,message:'Destination selected. Walking there automatically.'}));}}><span className="map-label map-markets">THREE MARKETS</span><span className="map-label map-unad">UNAD</span><span className="map-label map-poly">ADO POLY</span><span className="map-you" style={{left:(((status.x+45)/90)*100)+'%',top:(((22-status.z)/70)*100)+'%'}}>YOU</span></div><div className="map-shortcuts"><button onClick={()=>{autoDestinationRef.current={x:12,z:-43};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ Oja Oba Market</button><button onClick={()=>{autoDestinationRef.current={x:22,z:-43};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ Bisi Market</button><button onClick={()=>{autoDestinationRef.current={x:32,z:-43};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ New Garage Market</button><button onClick={()=>{autoDestinationRef.current={x:-34,z:-30};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🎓 UNAD</button><button onClick={()=>{autoDestinationRef.current={x:-13,z:-39};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🎓 Ado Poly</button></div><button className="start-shift" onClick={()=>{autoDestinationRef.current=null;autoPathRef.current=[];setAutoTravel(false);setMapOpen(false);}}>CLOSE MAP / CANCEL ROUTE</button></section></div>}{autoTravel&&<div className="auto-travel-banner">🚶 WALKING TO DESTINATION · JOYSTICK CANCELS</div>}{talkingTo && <div className="shop-backdrop" role="presentation"><section className="resident-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${talkingTo.name}`}><div className="shop-heading"><div><small>ADO-EKITI · NEIGHBOURHOOD</small><h2>{talkingTo.name}</h2><p>{talkingTo.age} years old · {talkingTo.role}</p></div><button className="shop-close" onClick={() => setTalkingTo(null)} aria-label="End conversation">×</button></div><div className="resident-dialogue"><span>💬</span><p>{dialogueLine}</p></div><div className="resident-topics"><button onClick={() => setDialogueLine(talkingTo.day)}>How is your day going?</button><button onClick={() => setDialogueLine(talkingTo.localTip)}>Tell me about this neighbourhood</button></div><button className="start-shift resident-goodbye" onClick={() => { setTalkingTo(null); setStatus((s) => ({ ...s, message: `You said goodbye to ${talkingTo.name}.` })); }}>NICE TALKING TO YOU</button></section></div>}
+        {mapOpen && <div className="shop-backdrop" role="presentation"><section className="city-map-panel" role="dialog" aria-modal="true" aria-label="Ado-Ekiti city map"><div className="shop-heading"><div><small>EKITI LIFESTYLE · CITY NAVIGATION</small><h2>Ado-Ekiti Map</h2><p>Tap the map or a destination to walk there automatically.</p></div><button className="shop-close" onClick={()=>setMapOpen(false)}>×</button></div><div className="city-map-canvas" onClick={(e)=>{const r=e.currentTarget.getBoundingClientRect();autoDestinationRef.current={x:-45+(e.clientX-r.left)/r.width*90,z:22-(e.clientY-r.top)/r.height*70};autoPathRef.current=[];autoPathIndexRef.current=0;setAutoTravel(true);setMapOpen(false);setStatus((v)=>({...v,message:'Destination selected. Walking there automatically.'}));}}><span className="map-label map-markets">OJA OBA · OJA BISI · OJA IRONA</span><span className="map-label map-unad">UNAD</span><span className="map-label map-poly">ADO POLY</span><span className="map-you" style={{left:(((status.x+45)/90)*100)+'%',top:(((22-status.z)/70)*100)+'%'}}>YOU</span></div><div className="map-shortcuts"><button onClick={()=>{autoDestinationRef.current={x:-40,z:-45};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ Oja Oba (Erekesan)</button><button onClick={()=>{autoDestinationRef.current={x:10,z:-45};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ Oja Bisi</button><button onClick={()=>{autoDestinationRef.current={x:40,z:-45};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ Oja Irona</button><button onClick={()=>{autoDestinationRef.current={x:-34,z:-30};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🎓 UNAD</button><button onClick={()=>{autoDestinationRef.current={x:-13,z:-39};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🎓 Ado Poly</button></div><button className="start-shift" onClick={()=>{autoDestinationRef.current=null;autoPathRef.current=[];setAutoTravel(false);setMapOpen(false);}}>CLOSE MAP / CANCEL ROUTE</button></section></div>}{autoTravel&&<div className="auto-travel-banner">🚶 WALKING TO DESTINATION · JOYSTICK CANCELS</div>}{talkingTo && <div className="shop-backdrop" role="presentation"><section className="resident-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${talkingTo.name}`}><div className="shop-heading"><div><small>ADO-EKITI · NEIGHBOURHOOD</small><h2>{talkingTo.name}</h2><p>{talkingTo.age} years old · {talkingTo.role}</p></div><button className="shop-close" onClick={() => setTalkingTo(null)} aria-label="End conversation">×</button></div><div className="resident-dialogue"><span>💬</span><p>{dialogueLine}</p></div><div className="resident-topics"><button onClick={() => setDialogueLine(talkingTo.day)}>How is your day going?</button><button onClick={() => setDialogueLine(talkingTo.localTip)}>Tell me about this neighbourhood</button></div><button className="start-shift resident-goodbye" onClick={() => { setTalkingTo(null); setStatus((s) => ({ ...s, message: `You said goodbye to ${talkingTo.name}.` })); }}>NICE TALKING TO YOU</button></section></div>}
         {jobOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label="Local job centre"><div className="shop-heading"><div><small>ADO-EKITI · COMMUNITY JOB BOARD</small><h2>Find a day's work</h2><p>Take a short neighbourhood delivery shift.</p></div><button className="shop-close" onClick={() => setJobOpen(false)} aria-label="Close jobs">×</button></div><div className="job-offer"><span>🛵</span><div><b>Neighbourhood Errand Assistant</b><small>Collect and deliver local orders around the area</small><strong>₦{jobPay.toLocaleString('en-NG')} per shift</strong></div></div><div className="job-requirements"><b>SHIFT DETAILS</b><span>Duration: 30 seconds (prototype)</span><span>Energy and hydration are used while working</span><span>Payment arrives when the shift is completed</span></div><button className="start-shift" onClick={() => { setJobOpen(false); setWorkSeconds(30); setJobWorking(true); setStatus((s) => ({ ...s, message: 'You started a delivery shift. Keep going!' })); }}>START SHIFT · EARN ₦{jobPay.toLocaleString('en-NG')}</button></section></div>}
         {jobWorking && <div className="working-banner"><span>🛵 ON DELIVERY SHIFT</span><b>{workSeconds}s remaining</b><small>Keep exploring — your shift is underway.</small></div>}
         {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Your bedroom, living area and kitchen are ready.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button><button onClick={()=>performHomeAction('sit')}><span>🛋️</span><b>Sit & relax</b><small>Use the sofa</small></button><button onClick={()=>performHomeAction('dance')}><span>💃</span><b>Dance</b><small>Move to music</small></button><button onClick={()=>performHomeAction('movie')}><span>📺</span><b>Watch movie</b><small>Movie night</small></button><button onClick={()=>{homeActivityRef.current='';setHomeActivity('');setStatus((s)=>({...s,message:'You stood up and are ready to move.'}));}}><span>🚶</span><b>Stand up</b><small>Return to movement</small></button></div>{homeActivity&&<div className="home-activity-status">CURRENT ACTIVITY: {homeActivity.toUpperCase()} · Choose Stand up to move again.</div>}<div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
