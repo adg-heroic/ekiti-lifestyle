@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 type Move = { x: number; z: number };
-type GameStatus = { message: string; x: number; z: number };
+type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean };
 
 function makeMaterial(color: string, roughness = 1) {
   return new THREE.MeshStandardMaterial({ color, roughness });
@@ -116,7 +116,17 @@ function App() {
   const cameraLookRef = useRef({ yaw: 0, pitch: 0.62 });
   const moveRef = useRef<Move>({ x: 0, z: 0 });
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
-  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12 });
+  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false });
+  const [shopOpen, setShopOpen] = useState(false);
+  const [wallet, setWallet] = useState(12000);
+  const [inventory, setInventory] = useState<Record<string, number>>({});
+  const shopItems = [{ id: 'water', name: 'Cold sachet water', detail: 'A quick refreshment', price: 100, emoji: '💧' }, { id: 'snack', name: 'Local snacks', detail: 'A small street-side bite', price: 350, emoji: '🥟' }, { id: 'softdrink', name: 'Soft drink', detail: 'Chilled bottle', price: 500, emoji: '🥤' }, { id: 'fruit', name: 'Fresh fruit', detail: 'Seasonal fruit portion', price: 250, emoji: '🍊' }];
+  const buyItem = (item: typeof shopItems[number]) => {
+    if (wallet < item.price) return;
+    setWallet((cash) => cash - item.price);
+    setInventory((items) => ({ ...items, [item.id]: (items[item.id] || 0) + 1 }));
+    setStatus((s) => ({ ...s, message: `${item.name} added to your bag.` }));
+  };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -278,10 +288,8 @@ function App() {
 
       if (performance.now() - lastUi > 250) {
         lastUi = performance.now();
-        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z) }));
-      }
-      if (player.position.distanceTo(kiosk) < 3) {
-        // Interaction prompt is presented by the UI layer below.
+        const nearKiosk = player.position.distanceTo(kiosk) < 3.2;
+        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk }));
       }
     };
     animate();
@@ -361,8 +369,10 @@ function App() {
       <section className="game-stage">
         <div className="world" ref={hostRef} aria-label="3D Ekiti Lifestyle world" />
         <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div>
-        <div className="player-card"><div className="player-avatar">👤</div><div><b>Dami</b><small>New resident</small></div><span className="cash">₦12,000</span></div>
+        <div className="player-card"><div className="player-avatar">👤</div><div><b>Dami</b><small>New resident</small></div><span className="cash">₦{wallet.toLocaleString("en-NG")}</span></div>
         <div className="world-tip">{status.message}</div>
+        {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
+        {shopOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label="Neighbourhood kiosk"><div className="shop-heading"><div><small>ADO-EKITI · STREET KIOSK</small><h2>Neighbourhood Store</h2><p>Pick up something for the road.</p></div><button className="shop-close" onClick={() => setShopOpen(false)} aria-label="Close shop">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString("en-NG")}</strong></div><div className="shop-items">{shopItems.map((item) => <article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id] || 0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString("en-NG")}</strong><button onClick={() => buyItem(item)} disabled={wallet < item.price}>BUY</button></div></article>)}</div><p className="shop-note">Prototype purchases update your demo wallet and bag for this session.</p></section></div> }
         <div className="touch-controls" aria-label="Virtual joystick movement control">
           <div
             ref={joystickRef}
