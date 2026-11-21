@@ -37,14 +37,15 @@ function addTree(scene: THREE.Scene, x: number, z: number) {
 
 function buildStarterInterior(scene: THREE.Scene) {
   const room = new THREE.Group();
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.18, 6.4), makeMaterial('#b98f67'));
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(14.4, 0.18, 12.4), makeMaterial('#b98f67'));
   floor.position.set(0, 0.02, 2.8); floor.receiveShadow = true; room.add(floor);
   const wall = (x: number, z: number, w: number, d: number, color = '#e8ddc8') => {
     const part = new THREE.Mesh(new THREE.BoxGeometry(w, 2.8, d), makeMaterial(color));
     part.position.set(x, 1.4, z); part.castShadow = true; part.receiveShadow = true; room.add(part);
   };
-  wall(-4.2, 2.8, 0.18, 6.4); wall(4.2, 2.8, 0.18, 6.4); wall(0, 6, 8.4, 0.18);
-  wall(-2.55, -0.4, 3.3, 0.18); wall(2.55, -0.4, 3.3, 0.18);
+  wall(-7.2, 2.8, 0.18, 12.4); wall(7.2, 2.8, 0.18, 12.4); wall(0, 9, 14.4, 0.18);
+  wall(-4.7, -3.4, 5.0, 0.18); wall(4.7, -3.4, 5.0, 0.18);
+  wall(-1.0, 5.9, 0.16, 5.8, '#d8c7ad'); wall(4.9, 5.9, 0.16, 5.8, '#d8c7ad'); wall(1.95, 3.05, 5.9, 0.16, '#d8c7ad');
   const addFurniture = (x: number, y: number, z: number, w: number, h: number, d: number, color: string) => {
     const item = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), makeMaterial(color));
     item.position.set(x, y + h / 2, z); item.castShadow = true; item.receiveShadow = true; room.add(item);
@@ -68,7 +69,11 @@ function buildStarterInterior(scene: THREE.Scene) {
   bulb.position.set(0, 2.55, 2.8); room.add(bulb);
   const light = new THREE.PointLight('#ffe1b0', 1.15, 13); light.position.set(0, 2.35, 2.8); room.add(light);
   const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.9, 0.08), new THREE.MeshStandardMaterial({ color: '#8fc4d0', roughness: 0.25 }));
-  windowGlass.position.set(-4.08, 1.65, 3.0); room.add(windowGlass);
+  windowGlass.position.set(-7.08, 1.65, 3.0); room.add(windowGlass);
+  addFurniture(5.9, 0.12, 7.3, 1.45, 0.12, 1.35, '#9ccbd0');
+  addFurniture(5.95, 0.12, 5.0, 0.72, 0.82, 0.55, '#f1eee4');
+  addFurniture(5.95, 0.12, 6.0, 0.58, 0.35, 0.5, '#e8e5dc');
+  addFurniture(2.9, 0.12, 7.6, 1.15, 0.82, 0.55, '#d9dedb');
   scene.add(room); room.visible = false; return room;
 }
 
@@ -299,6 +304,13 @@ function App() {
   const [shopOpen, setShopOpen] = useState(false);
   const [homeOpen, setHomeOpen] = useState(false);
   const [insideHome, setInsideHome] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [autoTravel, setAutoTravel] = useState(false);
+  const [homeActivity, setHomeActivity] = useState('');
+  const autoDestinationRef = useRef<{x:number;z:number}|null>(null);
+  const autoPathRef = useRef<Array<[number,number]>>([]);
+  const autoPathIndexRef = useRef(0);
+  const homeActivityRef = useRef('');
   const [nearbyResident, setNearbyResident] = useState<ResidentProfile | null>(null);
   const [talkingTo, setTalkingTo] = useState<ResidentProfile | null>(null);
   const [dialogueLine, setDialogueLine] = useState('');
@@ -328,8 +340,12 @@ function App() {
   }, [jobWorking]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const shopItems = [{ id: 'water', name: 'Cold sachet water', detail: 'A quick refreshment', price: 100, emoji: '💧' }, { id: 'snack', name: 'Local snacks', detail: 'A small street-side bite', price: 350, emoji: '🥟' }, { id: 'softdrink', name: 'Soft drink', detail: 'Chilled bottle', price: 500, emoji: '🥤' }, { id: 'fruit', name: 'Fresh fruit', detail: 'Seasonal fruit portion', price: 250, emoji: '🍊' }];
-  const performHomeAction = (action: 'sleep' | 'shower' | 'cook') => {
-    if (action === 'sleep') {
+  const performHomeAction = (action: 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie') => {
+    homeActivityRef.current=action; setHomeActivity(action);
+    if(action==='sit'){setStatus((s)=>({...s,message:'You sat down to relax.'}));}
+    else if(action==='dance'){setNeeds((n)=>({...n,energy:Math.max(0,n.energy-5)}));setStatus((s)=>({...s,message:'Music is playing — you are dancing in your living room!'}));}
+    else if(action==='movie'){setStatus((s)=>({...s,message:'Movie night! You are watching a film from the sofa.'}));}
+    else if (action === 'sleep') {
       setNeeds((n) => ({ ...n, energy: 100, hunger: Math.max(0, n.hunger - 12), thirst: Math.max(0, n.thirst - 12) }));
       setStatus((s) => ({ ...s, message: 'You had a good rest. Energy restored!' }));
     } else if (action === 'shower') {
@@ -591,7 +607,7 @@ function App() {
         const stepX = direction.x * delta * movementSpeed;
         const stepZ = direction.z * delta * movementSpeed;
         const canStandAt = (x: number, z: number) => isInsideRef.current
-          ? x >= -3.65 && x <= 3.65 && z >= 0.05 && z <= 5.45
+          ? x >= -6.65 && x <= 6.65 && z >= -2.9 && z <= 8.35
           : x >= -45 && x <= 45 && z >= -48 && z <= 22 && !colliders.some((obstacle) => Math.abs(x - obstacle.x) < obstacle.halfX + 0.42 && Math.abs(z - obstacle.z) < obstacle.halfZ + 0.42);
         if (canStandAt(player.position.x + stepX, player.position.z)) player.position.x += stepX;
         if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
@@ -599,9 +615,9 @@ function App() {
       }
       target.set(player.position.x, 1.2, player.position.z);
       const look = cameraLookRef.current;
-      const orbitDistance = isInsideRef.current ? 6 : 10;
+      const orbitDistance = isInsideRef.current ? 8 : 10;
       const desiredCamera = isInsideRef.current
-        ? new THREE.Vector3(player.position.x + Math.sin(look.yaw) * 5.5, player.position.y + 7.2, player.position.z + Math.cos(look.yaw) * 5.5)
+        ? new THREE.Vector3(player.position.x + Math.sin(look.yaw) * 7.2, player.position.y + 8.4, player.position.z + Math.cos(look.yaw) * 7.2)
         : new THREE.Vector3(
             player.position.x + Math.sin(look.yaw) * Math.cos(look.pitch) * orbitDistance,
             player.position.y + 1.2 + Math.sin(look.pitch) * orbitDistance,
@@ -720,15 +736,15 @@ function App() {
       </header>
       <section className="game-stage">
         <div className="world" ref={hostRef} aria-label="3D Ekiti Lifestyle world" />
-        <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div>
+        <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div><button className="city-map-toggle" onClick={()=>setMapOpen(true)}>🗺️ CITY MAP</button>
         <div className="player-card"><div className="player-avatar">👤</div><div><b>Dami</b><small>New resident</small></div><span className="cash">₦{wallet.toLocaleString("en-NG")}</span></div>
         <div className="world-tip">{status.message}</div>
         <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
         {nearbyResident && !talkingTo && !shopOpen && !homeOpen && !jobOpen && <button className="resident-interact-prompt" onClick={() => { setTalkingTo(nearbyResident); setDialogueLine(nearbyResident.greeting); }}>💬 TALK TO {nearbyResident.name.toUpperCase()} <span>{nearbyResident.role} · Tap to greet</span></button>}
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
-        {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
-        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
+        {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); homeActivityRef.current=''; setHomeActivity(''); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
+        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); homeActivityRef.current=''; setHomeActivity(''); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
         {talkingTo && <div className="shop-backdrop" role="presentation"><section className="resident-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${talkingTo.name}`}><div className="shop-heading"><div><small>ADO-EKITI · NEIGHBOURHOOD</small><h2>{talkingTo.name}</h2><p>{talkingTo.age} years old · {talkingTo.role}</p></div><button className="shop-close" onClick={() => setTalkingTo(null)} aria-label="End conversation">×</button></div><div className="resident-dialogue"><span>💬</span><p>{dialogueLine}</p></div><div className="resident-topics"><button onClick={() => setDialogueLine(talkingTo.day)}>How is your day going?</button><button onClick={() => setDialogueLine(talkingTo.localTip)}>Tell me about this neighbourhood</button></div><button className="start-shift resident-goodbye" onClick={() => { setTalkingTo(null); setStatus((s) => ({ ...s, message: `You said goodbye to ${talkingTo.name}.` })); }}>NICE TALKING TO YOU</button></section></div>}
         {jobOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label="Local job centre"><div className="shop-heading"><div><small>ADO-EKITI · COMMUNITY JOB BOARD</small><h2>Find a day's work</h2><p>Take a short neighbourhood delivery shift.</p></div><button className="shop-close" onClick={() => setJobOpen(false)} aria-label="Close jobs">×</button></div><div className="job-offer"><span>🛵</span><div><b>Neighbourhood Errand Assistant</b><small>Collect and deliver local orders around the area</small><strong>₦{jobPay.toLocaleString('en-NG')} per shift</strong></div></div><div className="job-requirements"><b>SHIFT DETAILS</b><span>Duration: 30 seconds (prototype)</span><span>Energy and hydration are used while working</span><span>Payment arrives when the shift is completed</span></div><button className="start-shift" onClick={() => { setJobOpen(false); setWorkSeconds(30); setJobWorking(true); setStatus((s) => ({ ...s, message: 'You started a delivery shift. Keep going!' })); }}>START SHIFT · EARN ₦{jobPay.toLocaleString('en-NG')}</button></section></div>}
         {jobWorking && <div className="working-banner"><span>🛵 ON DELIVERY SHIFT</span><b>{workSeconds}s remaining</b><small>Keep exploring — your shift is underway.</small></div>}
