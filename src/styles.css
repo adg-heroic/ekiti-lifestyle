@@ -55,3 +55,16 @@ button{font:inherit}
 .home-consumables button small{margin-left:auto;color:#d5ad6e;font-size:10px}
 .home-consumables button:disabled{opacity:.38;cursor:not-allowed}
 .home-consumables button:not(:disabled):active{border-color:#d6a85e;background:#d6a85e20}
+
+.job-interact-prompt{position:absolute;left:50%;top:39%;transform:translate(-50%,-50%);z-index:5;border:1px solid #e2c18a;background:#17251eed;color:#f7e7c6;border-radius:14px;padding:13px 18px;font-weight:800;letter-spacing:.7px;box-shadow:0 12px 32px #0006;cursor:pointer}
+.job-interact-prompt span{display:block;margin-top:4px;color:#b9c6b8;font-size:10px;font-weight:500;letter-spacing:0}
+.job-panel{width:min(460px,100%);max-height:min(680px,92%);overflow:auto;border:1px solid #ffffff2b;border-radius:20px;padding:22px;background:linear-gradient(160deg,#293e32,#14231d 75%);box-shadow:0 24px 70px #0009;color:#f5f2e9}
+.job-offer{display:flex;gap:13px;align-items:center;margin-top:22px;padding:16px;border:1px solid #d6a85e55;border-radius:14px;background:#d6a85e12}
+.job-offer>span{width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:#d6a85e20;font-size:27px}
+.job-offer b,.job-offer small,.job-offer strong{display:block}.job-offer b{font-size:13px}.job-offer small{margin-top:5px;color:#aebeb1;font-size:10px;line-height:1.4}.job-offer strong{margin-top:8px;color:#f1d08c;font-size:13px}
+.job-requirements{display:grid;gap:8px;margin:17px 0;padding:14px;border-radius:12px;background:#0e1b16;color:#b9c8ba;font-size:10px}
+.job-requirements>b{margin-bottom:2px;color:#d5ad6e;font-size:9px;letter-spacing:1.2px}
+.start-shift{width:100%;border:0;border-radius:11px;padding:13px;background:#d6a85e;color:#1b281f;font-size:11px;font-weight:900;letter-spacing:.5px;cursor:pointer}
+.working-banner{position:absolute;left:50%;top:90px;transform:translateX(-50%);z-index:6;display:grid;gap:5px;min-width:210px;padding:12px 16px;border:1px solid #f1d08c77;border-radius:13px;background:#14231eea;box-shadow:0 8px 24px #0005;text-align:center}
+.working-banner span{color:#f1d08c;font-size:9px;font-weight:900;letter-spacing:1.2px}.working-banner b{font:700 20px 'Space Grotesk';color:#fff}.working-banner small{color:#aebeb1;font-size:9px}
+@media(max-width:700px){.job-panel{padding:17px;border-radius:17px}.job-interact-prompt{top:38%;padding:11px 15px;font-size:11px;white-space:nowrap}.working-banner{top:115px;min-width:190px;padding:9px 13px}.working-banner b{font-size:18px}}
