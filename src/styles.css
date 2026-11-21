@@ -126,3 +126,7 @@ button{font:inherit}
 .course-label{display:grid;gap:7px;margin:14px 0;color:#d6b77e;font-size:9px;font-weight:900;letter-spacing:1px}.course-label select{width:100%;padding:11px;border:1px solid #ffffff30;border-radius:9px;background:#14231d;color:#f5f2e9}
 .course-success{padding:10px;border-radius:8px;background:#83c78b18;color:#b9e0b5!important}
 @media(max-width:700px){.topbar-actions{gap:6px}.life-hub-toggle{padding:8px 8px;font-size:8px}.day-chip{font-size:7px}.life-hub-panel{padding:15px;border-radius:16px}.life-summary{gap:6px}.life-summary>div{padding:9px}.life-summary b{font-size:11px}.life-section{padding:11px}.life-career-list{grid-template-columns:1fr 1fr}.life-friends{grid-template-columns:1fr 1fr}}
+
+
+.weather-toggle{border:1px solid #a9cde088;border-radius:10px;padding:10px 12px;background:#8dbbd01a;color:#e2f1f3;font-size:9px;font-weight:900;letter-spacing:.6px;cursor:pointer;white-space:nowrap}
+@media(max-width:700px){.weather-toggle{padding:8px 7px;font-size:8px}.topbar-actions{gap:5px}}
