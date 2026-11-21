@@ -282,8 +282,6 @@ function App() {
     player.position.set(0, 0, 12);
     scene.add(player);
     playerRef.current = player;
-    outdoorObjectsRef.current = scene.children.filter((object) => object !== hemi && object !== sun && object !== player && object !== interior);
-
     // Lightweight neighbourhood residents: simple original low-poly walkers.
     const pedestrians = [0, 1, 2, 3].map((index) => {
       const resident = new THREE.Group();
@@ -309,6 +307,7 @@ function App() {
       scene.add(resident);
       return resident;
     });
+    outdoorObjectsRef.current = scene.children.filter((object) => object !== hemi && object !== sun && object !== player && object !== interior);
 
     const clock = new THREE.Clock();
     const target = new THREE.Vector3();
