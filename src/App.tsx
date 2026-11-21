@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 type Move = { x: number; z: number };
-type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean };
+type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean; nearJob: boolean };
 type Needs = { hunger: number; thirst: number; energy: number; hygiene: number };
 
 function makeMaterial(color: string, roughness = 1) {
@@ -117,13 +117,32 @@ function App() {
   const cameraLookRef = useRef({ yaw: 0, pitch: 0.62 });
   const moveRef = useRef<Move>({ x: 0, z: 0 });
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
-  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false, nearHome: false });
+  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false, nearHome: false, nearJob: false });
   const [shopOpen, setShopOpen] = useState(false);
   const [homeOpen, setHomeOpen] = useState(false);
+  const [jobOpen, setJobOpen] = useState(false);
+  const [jobWorking, setJobWorking] = useState(false);
+  const [workSeconds, setWorkSeconds] = useState(0);
   const [needs, setNeeds] = useState<Needs>({ hunger: 82, thirst: 78, energy: 90, hygiene: 88 });
   const needsRef = useRef(needs);
   useEffect(() => { needsRef.current = needs; }, [needs]);
   const [wallet, setWallet] = useState(12000);
+  const jobPay = 2500;
+  useEffect(() => {
+    if (!jobWorking) return;
+    const timer = window.setInterval(() => setWorkSeconds((seconds) => {
+      if (seconds <= 1) {
+        window.clearInterval(timer);
+        setJobWorking(false);
+        setWallet((cash) => cash + jobPay);
+        setNeeds((n) => ({ ...n, energy: Math.max(0, n.energy - 14), hunger: Math.max(0, n.hunger - 8), thirst: Math.max(0, n.thirst - 10), hygiene: Math.max(0, n.hygiene - 4) }));
+        setStatus((s) => ({ ...s, message: `Shift complete! You earned ₦${jobPay.toLocaleString('en-NG')}.` }));
+        return 0;
+      }
+      return seconds - 1;
+    }), 1000);
+    return () => window.clearInterval(timer);
+  }, [jobWorking]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const shopItems = [{ id: 'water', name: 'Cold sachet water', detail: 'A quick refreshment', price: 100, emoji: '💧' }, { id: 'snack', name: 'Local snacks', detail: 'A small street-side bite', price: 350, emoji: '🥟' }, { id: 'softdrink', name: 'Soft drink', detail: 'Chilled bottle', price: 500, emoji: '🥤' }, { id: 'fruit', name: 'Fresh fruit', detail: 'Seasonal fruit portion', price: 250, emoji: '🍊' }];
   const performHomeAction = (action: 'sleep' | 'shower' | 'cook') => {
@@ -340,8 +359,9 @@ function App() {
       if (performance.now() - lastUi > 250) {
         lastUi = performance.now();
         const nearKiosk = player.position.distanceTo(kiosk) < 3.2;
+        const nearJob = Math.hypot(player.position.x + 7.5, player.position.z + 4.2) < 4.2;
         const nearHome = Math.hypot(player.position.x, player.position.z + 1.7) < 2.8;
-        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome }));
+        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome, nearJob }));
       }
       if (elapsed - lastNeedsTick >= 5) {
         lastNeedsTick = elapsed;
@@ -429,7 +449,10 @@ function App() {
         <div className="world-tip">{status.message}</div>
         <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
+        {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
         {status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏠 HOME <span>Tap to take care of yourself</span></button>}
+        {jobOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label="Local job centre"><div className="shop-heading"><div><small>ADO-EKITI · COMMUNITY JOB BOARD</small><h2>Find a day's work</h2><p>Take a short neighbourhood delivery shift.</p></div><button className="shop-close" onClick={() => setJobOpen(false)} aria-label="Close jobs">×</button></div><div className="job-offer"><span>🛵</span><div><b>Neighbourhood Errand Assistant</b><small>Collect and deliver local orders around the area</small><strong>₦{jobPay.toLocaleString('en-NG')} per shift</strong></div></div><div className="job-requirements"><b>SHIFT DETAILS</b><span>Duration: 30 seconds (prototype)</span><span>Energy and hydration are used while working</span><span>Payment arrives when the shift is completed</span></div><button className="start-shift" onClick={() => { setJobOpen(false); setWorkSeconds(30); setJobWorking(true); setStatus((s) => ({ ...s, message: 'You started a delivery shift. Keep going!' })); }}>START SHIFT · EARN ₦{jobPay.toLocaleString('en-NG')}</button></section></div>}
+        {jobWorking && <div className="working-banner"><span>🛵 ON DELIVERY SHIFT</span><b>{workSeconds}s remaining</b><small>Keep exploring — your shift is underway.</small></div>}
         {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>Take care of yourself</h2><p>Rest, freshen up or prepare a meal.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button></div><div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
         {shopOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label="Neighbourhood kiosk"><div className="shop-heading"><div><small>ADO-EKITI · STREET KIOSK</small><h2>Neighbourhood Store</h2><p>Pick up something for the road.</p></div><button className="shop-close" onClick={() => setShopOpen(false)} aria-label="Close shop">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString("en-NG")}</strong></div><div className="shop-items">{shopItems.map((item) => <article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id] || 0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString("en-NG")}</strong><button onClick={() => buyItem(item)} disabled={wallet < item.price}>BUY</button></div></article>)}</div><p className="shop-note">Prototype purchases update your demo wallet and bag for this session.</p></section></div> }
         <div className="touch-controls" aria-label="Virtual joystick movement control">
