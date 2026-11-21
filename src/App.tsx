@@ -306,6 +306,7 @@ function App() {
   const [jobWorking, setJobWorking] = useState(false);
   const [workSeconds, setWorkSeconds] = useState(0);
   const [needs, setNeeds] = useState<Needs>({ hunger: 82, thirst: 78, energy: 90, hygiene: 88 });
+  const [gameClock, setGameClock] = useState({ day: 1, hour: 8, minute: 0 });
   const needsRef = useRef(needs);
   useEffect(() => { needsRef.current = needs; }, [needs]);
   const [wallet, setWallet] = useState(12000);
@@ -438,6 +439,7 @@ function App() {
     let frame = 0;
     let lastUi = 0;
     let lastNeedsTick = 0;
+    let lastClockUi = -1;
     let active = true;
     const keys = new Set<string>();
     const onKeyDown = (event: KeyboardEvent) => {
@@ -463,6 +465,19 @@ function App() {
       frame = requestAnimationFrame(animate);
       const delta = Math.min(clock.getDelta(), 0.04);
       const elapsed = clock.elapsedTime;
+      const totalGameMinutes = 8 * 60 + elapsed * 2;
+      const gameMinutes = Math.floor(totalGameMinutes) % 1440;
+      const gameHour = Math.floor(gameMinutes / 60);
+      if (Math.floor(elapsed) !== lastClockUi) {
+        lastClockUi = Math.floor(elapsed);
+        setGameClock({ day: 1 + Math.floor(totalGameMinutes / 1440), hour: gameHour, minute: gameMinutes % 60 });
+      }
+      const daylight = THREE.MathUtils.clamp((Math.sin(((gameHour - 6) / 12) * Math.PI) + 0.12) / 1.12, 0.08, 1);
+      sun.intensity = 0.22 + daylight * 2.25;
+      hemi.intensity = 0.45 + daylight * 1.65;
+      sun.color.setHSL(0.10, 0.42, 0.58 + daylight * 0.25);
+      scene.background = new THREE.Color('#17243b').lerp(new THREE.Color('#a9d6dc'), daylight);
+      scene.fog.color.copy(scene.background);
       pedestrians.forEach((resident) => {
         const { phase, speed, leftLeg, rightLeg, leftArm, rightArm } = resident.userData as {
           phase: number; speed: number; leftLeg: THREE.Group; rightLeg: THREE.Group;
@@ -478,37 +493,43 @@ function App() {
         const facingPlayer = playerDistance < 2.7;
         let gait = 0;
 
+        const blockedAt = (x: number, z: number) => colliders.some((obstacle) =>
+          Math.abs(x - obstacle.x) < obstacle.halfX + 0.48 &&
+          Math.abs(z - obstacle.z) < obstacle.halfZ + 0.48
+        );
+        const daytime = gameHour >= 7 && gameHour < 18;
+        const deliveryStops: Array<[number, number]> = [[11, -9.4], [24, -8.2], [28, -18], [-18, -9.5]];
+        let destination: [number, number];
+        if (profile.id === 0) destination = daytime ? [11, -9.4] : [-10, 8.2];
+        else if (profile.id === 1) destination = gameHour >= 18 || gameHour < 6 ? [-10, 8.2] : [-10, 4.5];
+        else if (profile.id === 2) destination = daytime ? [-11, -3.2] : [-9, 9.5];
+        else if (profile.id === 3) destination = daytime ? [-25, -18] : [-9, 9.5];
+        else destination = daytime ? deliveryStops[Math.floor(elapsed / 24) % deliveryStops.length] : [-9, 9.5];
         if (facingPlayer) {
-          // Residents acknowledge the player and leave enough space for a natural conversation.
           resident.rotation.y = Math.atan2(player.position.x - resident.position.x, player.position.z - resident.position.z);
         } else if (!nearbyPerson) {
-          const directionX = progress <= 1 ? 1 : -1;
-          const step = directionX * 24 * speed * delta;
-          const nextX = resident.position.x + step;
-          const blockedAt = (x: number, z: number) => colliders.some((obstacle) =>
-            Math.abs(x - obstacle.x) < obstacle.halfX + 0.48 &&
-            Math.abs(z - obstacle.z) < obstacle.halfZ + 0.48
-          );
-          const nextZ = THREE.MathUtils.damp(resident.position.z, laneZ, 3.5, delta);
-          if (!blockedAt(nextX, nextZ)) {
-            resident.position.x = nextX;
-            resident.position.z = nextZ;
-          } else {
-            // Try either side of the obstruction rather than walking through a building or kiosk.
-            const detours = [laneZ - 1.5, laneZ + 1.5].filter((z) => !blockedAt(resident.position.x, z) && !blockedAt(nextX, z));
-            if (detours.length) {
-              const detourZ = detours.reduce((best, z) => Math.abs(z - laneZ) < Math.abs(best - laneZ) ? z : best);
-              resident.position.z = THREE.MathUtils.damp(resident.position.z, detourZ, 4, delta);
-              if (!blockedAt(nextX, resident.position.z)) resident.position.x = nextX;
+          const dx = destination[0] - resident.position.x;
+          const dz = destination[1] - resident.position.z;
+          const distance = Math.hypot(dx, dz);
+          if (distance > 0.45) {
+            const step = Math.min(distance, delta * (profile.id === 4 ? 2.25 : 1.8));
+            const nextX = resident.position.x + (dx / distance) * step;
+            const nextZ = resident.position.z + (dz / distance) * step;
+            if (!blockedAt(nextX, nextZ)) {
+              resident.position.x = nextX;
+              resident.position.z = nextZ;
+              resident.rotation.y = Math.atan2(dx, dz);
+              gait = Math.sin(elapsed * 7 + phase * 12);
             } else {
-              // If there is no safe route, turn around and try the other direction next frame.
-              resident.rotation.y = directionX > 0 ? -Math.PI / 2 : Math.PI / 2;
+              const sideSteps: Array<[number, number]> = [[nextX, resident.position.z], [resident.position.x, nextZ]];
+              const clearStep = sideSteps.find(([x, z]) => !blockedAt(x, z));
+              if (clearStep) {
+                resident.position.set(clearStep[0], 0, clearStep[1]);
+                resident.rotation.y = Math.atan2(dx, dz);
+                gait = Math.sin(elapsed * 7 + phase * 12);
+              }
             }
           }
-          if (!blockedAt(resident.position.x, resident.position.z)) {
-            resident.rotation.y = directionX > 0 ? Math.PI / 2 : -Math.PI / 2;
-          }
-          gait = Math.sin(elapsed * 7 + phase * 12);
         }
         leftLeg.rotation.x = gait * 0.38;
         rightLeg.rotation.x = -gait * 0.38;
@@ -659,7 +680,7 @@ function App() {
     <main className="game-shell">
       <header className="topbar">
         <div className="brand-lockup"><span className="brand-mark">E</span><div><strong>EKITI LIFESTYLE</strong><small>A LIFE IN ADO-EKITI</small></div></div>
-        <div className="day-chip"><span className="live-dot" /> WORLD PREVIEW <b>DAY 01 · 08:00</b></div>
+        <div className="day-chip"><span className="live-dot" /> ADO-EKITI <b>DAY {String(gameClock.day).padStart(2, '0')} · {String(gameClock.hour).padStart(2, '0')}:{String(gameClock.minute).padStart(2, '0')}</b></div>
       </header>
       <section className="game-stage">
         <div className="world" ref={hostRef} aria-label="3D Ekiti Lifestyle world" />
