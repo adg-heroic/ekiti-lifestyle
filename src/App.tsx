@@ -5,8 +5,15 @@ type Move = { x: number; z: number };
 type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean; nearJob: boolean; nearMarket: number; nearCampus: string };
 type Needs = { hunger: number; thirst: number; energy: number; fun: number; social: number; hygiene: number; bladder: number };
 type HomeObjectAction = 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie' | 'read-hustle' | 'read-charisma' | 'use-toilet';
+type HomeActivityTask = { action: HomeObjectAction; label: string; startedAt: number; endsAt: number; progress: number; ingredient?: 'snack' | 'fruit' };
+type SavedHomeProgress = { needs?: Partial<Needs>; homeSkills?: Partial<{ hustle: number; charisma: number }>; inventory?: Record<string, number>; completedActivities?: number; lastActivity?: string };
 type HomeObjectData = { id: string; name: string; room: string; description: string; emoji: string; actions: Array<{ label: string; detail: string; duration: string; action: HomeObjectAction }> };
 type ResidentProfile = { id: number; name: string; age: number; role: string; greeting: string; day: string; localTip: string };
+
+function loadSavedHomeProgress(): SavedHomeProgress {
+  try { return JSON.parse(localStorage.getItem('ekiti-home-progress-v1') || '{}') as SavedHomeProgress; }
+  catch { return {}; }
+}
 
 function makeMaterial(color: string, roughness = 1) {
   return new THREE.MeshStandardMaterial({ color, roughness });
@@ -437,13 +444,16 @@ function App() {
   const [homeOpen, setHomeOpen] = useState(false);
   const [insideHome, setInsideHome] = useState(false);
   const [selectedHomeObject, setSelectedHomeObject] = useState<HomeObjectData | null>(null);
-  const [homeSkills, setHomeSkills] = useState({ hustle: 0, charisma: 0 });
+  const [homeSkills, setHomeSkills] = useState(() => { const saved = loadSavedHomeProgress().homeSkills; return { hustle: saved?.hustle ?? 0, charisma: saved?.charisma ?? 0 }; });
+  const [homeProgress, setHomeProgress] = useState(() => { const saved = loadSavedHomeProgress(); return { completedActivities: saved.completedActivities ?? 0, lastActivity: saved.lastActivity ?? '' }; });
   const [mapOpen, setMapOpen] = useState(false);
   const [weather, setWeather] = useState<'sunny' | 'rainy'>('sunny');
   const weatherRef = useRef<'sunny' | 'rainy'>('sunny');
   useEffect(() => { weatherRef.current = weather; }, [weather]);
   const [autoTravel, setAutoTravel] = useState(false);
   const [homeActivity, setHomeActivity] = useState('');
+  const [homeTask, setHomeTask] = useState<HomeActivityTask | null>(null);
+  const homeTaskRef = useRef<HomeActivityTask | null>(null);
   const autoDestinationRef = useRef<{x:number;z:number}|null>(null);
   const autoPathRef = useRef<Array<[number,number]>>([]);
   const autoPathIndexRef = useRef(0);
@@ -456,7 +466,7 @@ function App() {
   const [jobOpen, setJobOpen] = useState(false);
   const [jobWorking, setJobWorking] = useState(false);
   const [workSeconds, setWorkSeconds] = useState(0);
-  const [needs, setNeeds] = useState<Needs>({ hunger: 82, thirst: 78, energy: 90, fun: 84, social: 76, hygiene: 88, bladder: 92 });
+  const [needs, setNeeds] = useState<Needs>(() => ({ hunger: 82, thirst: 78, energy: 90, fun: 84, social: 76, hygiene: 88, bladder: 92, ...loadSavedHomeProgress().needs }));
   const [gameClock, setGameClock] = useState({ day: 1, hour: 8, minute: 0 });
   const needsRef = useRef(needs);
   useEffect(() => { needsRef.current = needs; }, [needs]);
@@ -618,7 +628,11 @@ function App() {
     }), 1000);
     return () => window.clearInterval(timer);
   }, [jobWorking]);
-  const [inventory, setInventory] = useState<Record<string, number>>({});
+  const [inventory, setInventory] = useState<Record<string, number>>(() => loadSavedHomeProgress().inventory ?? {});
+  useEffect(() => {
+    try { localStorage.setItem('ekiti-home-progress-v1', JSON.stringify({ needs, homeSkills, inventory, completedActivities: homeProgress.completedActivities, lastActivity: homeProgress.lastActivity })); }
+    catch { /* Home progress remains playable if local storage is unavailable. */ }
+  }, [needs, homeSkills, inventory, homeProgress]);
   const shopItems = [{ id: 'water', name: 'Cold sachet water', detail: 'A quick refreshment', price: 100, emoji: '💧' }, { id: 'snack', name: 'Local snacks', detail: 'A small street-side bite', price: 350, emoji: '🥟' }, { id: 'softdrink', name: 'Soft drink', detail: 'Chilled bottle', price: 500, emoji: '🥤' }, { id: 'fruit', name: 'Fresh fruit', detail: 'Seasonal fruit portion', price: 250, emoji: '🍊' }];
   const marketNames = ['Oja Oba (Erekesan)', 'Oja Bisi', 'Oja Irona'];
   const marketProducts = [
@@ -670,45 +684,88 @@ function App() {
     setExamPassed(true);
     setStatus((v) => ({ ...v, message: `You passed your ${studentCourse} assessment at ${enrolledCampus}. Keep going towards graduation!` }));
   };
-  const performHomeAction = (action: 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie') => {
-    homeActivityRef.current=action; setHomeActivity(action);
-    if(action==='sit'){
-      setNeeds((n)=>({...n,fun:Math.min(100,n.fun+8),energy:Math.min(100,n.energy+3)}));
-      setStatus((s)=>({...s,message:'You sat down to relax. Your mood and energy lifted.'}));
+  const homeActivityDurations: Record<HomeObjectAction, number> = { sleep: 15, shower: 10, cook: 12, sit: 9, dance: 10, movie: 12, 'read-hustle': 11, 'read-charisma': 11, 'use-toilet': 8 };
+  const homeActivityLabels: Record<HomeObjectAction, string> = { sleep: 'Sleeping', shower: 'Taking a shower', cook: 'Cooking a meal', sit: 'Relaxing on the sofa', dance: 'Dancing to music', movie: 'Watching a movie', 'read-hustle': 'Reading a business book', 'read-charisma': 'Reading a novel', 'use-toilet': 'Using the bathroom' };
+  const startHomeActivity = (action: HomeObjectAction) => {
+    if (homeTaskRef.current) return;
+    const ingredient = action === 'cook' ? ((inventory.snack || 0) > 0 ? 'snack' : (inventory.fruit || 0) > 0 ? 'fruit' : undefined) : undefined;
+    if (action === 'cook' && !ingredient) {
+      setStatus((s) => ({ ...s, message: 'You need local snacks or fresh fruit from the kiosk before you can cook.' }));
+      return;
     }
-    else if(action==='dance'){
-      setNeeds((n)=>({...n,fun:Math.min(100,n.fun+22),energy:Math.max(0,n.energy-8),thirst:Math.max(0,n.thirst-4)}));
-      setStatus((s)=>({...s,message:'Music is playing — dancing lifted your fun, but used some energy.'}));
-    }
-    else if(action==='movie'){
-      setNeeds((n)=>({...n,fun:Math.min(100,n.fun+20),energy:Math.max(0,n.energy-2)}));
-      setStatus((s)=>({...s,message:'Movie night! You feel more entertained and relaxed.'}));
-    }
-    else if (action === 'sleep') {
-      setNeeds((n) => ({ ...n, energy: 100, hunger: Math.max(0, n.hunger - 12), thirst: Math.max(0, n.thirst - 12), fun: Math.min(100,n.fun+5), bladder: Math.max(0,n.bladder-12) }));
-      setStatus((s) => ({ ...s, message: 'You had a good rest. Energy restored. Remember to use the bathroom after waking.' }));
-    } else if (action === 'shower') {
-      setNeeds((n) => ({ ...n, hygiene: 100, energy: Math.max(0, n.energy - 4), fun: Math.min(100,n.fun+3) }));
-      setStatus((s) => ({ ...s, message: 'Fresh and clean. Hygiene restored!' }));
-    } else {
-      const ingredient = (inventory.snack || 0) > 0 ? 'snack' : (inventory.fruit || 0) > 0 ? 'fruit' : '';
-      if (!ingredient) {
-        setStatus((s) => ({ ...s, message: 'You need local snacks or fresh fruit from the kiosk to cook.' }));
-        return;
-      }
-      setInventory((items) => ({ ...items, [ingredient]: Math.max(0, (items[ingredient] || 0) - 1) }));
-      setNeeds((n) => ({ ...n, hunger: Math.min(100, n.hunger + 48), energy: Math.max(0, n.energy - 3), fun: Math.min(100,n.fun+4) }));
-      setStatus((s) => ({ ...s, message: 'Meal ready! Your hunger has eased.' }));
-    }
-  };
-
-  const performFurnitureAction = (action: HomeObjectAction) => {
+    const startedAt = Date.now();
+    const task: HomeActivityTask = { action, label: homeActivityLabels[action], startedAt, endsAt: startedAt + homeActivityDurations[action] * 1000, progress: 0, ingredient };
+    homeTaskRef.current = task;
+    homeActivityRef.current = action;
+    setHomeTask(task);
+    setHomeActivity(action);
+    setHomeOpen(false);
     setSelectedHomeObject(null);
-    if (action === 'read-hustle') { setHomeSkills((skills) => ({ ...skills, hustle: skills.hustle + 1 })); setNeeds((n) => ({ ...n, energy: Math.max(0, n.energy - 2) })); setStatus((s) => ({ ...s, message: 'You finished a business book. Hustle skill improved!' })); }
-    else if (action === 'read-charisma') { setHomeSkills((skills) => ({ ...skills, charisma: skills.charisma + 1 })); setStatus((s) => ({ ...s, message: 'You enjoyed a good novel. Charisma skill improved!' })); }
-    else if (action === 'use-toilet') { setNeeds((n) => ({ ...n, bladder: 100 })); setStatus((s) => ({ ...s, message: 'Bathroom break complete. Your bladder need is restored.' })); }
-    else { performHomeAction(action); }
+    setStatus((s) => ({ ...s, message: task.label + '... Your character will finish in about ' + homeActivityDurations[action] + ' seconds.' }));
   };
+  const completeHomeActivity = (task: HomeActivityTask) => {
+    const action = task.action;
+    if (action === 'sleep') {
+      setNeeds((n) => ({ ...n, energy: 100, hunger: Math.max(0, n.hunger - 12), thirst: Math.max(0, n.thirst - 12), fun: Math.min(100, n.fun + 5), bladder: Math.max(0, n.bladder - 12) }));
+      setStatus((s) => ({ ...s, message: 'You woke up feeling rested. Energy restored. Remember to use the bathroom after waking.' }));
+    } else if (action === 'shower') {
+      setNeeds((n) => ({ ...n, hygiene: 100, energy: Math.max(0, n.energy - 4), fun: Math.min(100, n.fun + 3) }));
+      setStatus((s) => ({ ...s, message: 'Shower complete. You are fresh and clean!' }));
+    } else if (action === 'cook') {
+      if (task.ingredient) setInventory((items) => ({ ...items, [task.ingredient as 'snack' | 'fruit']: Math.max(0, (items[task.ingredient as 'snack' | 'fruit'] || 0) - 1) }));
+      setNeeds((n) => ({ ...n, hunger: Math.min(100, n.hunger + 48), energy: Math.max(0, n.energy - 3), fun: Math.min(100, n.fun + 4) }));
+      setStatus((s) => ({ ...s, message: 'Meal ready! You used one item from your bag and your hunger has eased.' }));
+    } else if (action === 'sit') {
+      setNeeds((n) => ({ ...n, fun: Math.min(100, n.fun + 8), energy: Math.min(100, n.energy + 3) }));
+      setStatus((s) => ({ ...s, message: 'You finished relaxing on the sofa. Your mood and energy lifted.' }));
+    } else if (action === 'dance') {
+      setNeeds((n) => ({ ...n, fun: Math.min(100, n.fun + 22), energy: Math.max(0, n.energy - 8), thirst: Math.max(0, n.thirst - 4) }));
+      setStatus((s) => ({ ...s, message: 'Dance session complete! Your fun increased, but you used some energy and water.' }));
+    } else if (action === 'movie') {
+      setNeeds((n) => ({ ...n, fun: Math.min(100, n.fun + 20), energy: Math.max(0, n.energy - 2) }));
+      setStatus((s) => ({ ...s, message: 'Movie night finished! You feel more entertained and relaxed.' }));
+    } else if (action === 'read-hustle') {
+      setHomeSkills((skills) => ({ ...skills, hustle: skills.hustle + 1 }));
+      setNeeds((n) => ({ ...n, energy: Math.max(0, n.energy - 2) }));
+      setStatus((s) => ({ ...s, message: 'You finished a business book. Hustle skill improved!' }));
+    } else if (action === 'read-charisma') {
+      setHomeSkills((skills) => ({ ...skills, charisma: skills.charisma + 1 }));
+      setStatus((s) => ({ ...s, message: 'You enjoyed a good novel. Charisma skill improved!' }));
+    } else {
+      setNeeds((n) => ({ ...n, bladder: 100 }));
+      setStatus((s) => ({ ...s, message: 'Bathroom break complete. Your bladder need is restored.' }));
+    }
+    setHomeProgress((progress) => ({ completedActivities: progress.completedActivities + 1, lastActivity: task.label }));
+  };
+  const performHomeAction = (action: 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie') => startHomeActivity(action);
+  const performFurnitureAction = (action: HomeObjectAction) => startHomeActivity(action);
+  const cancelHomeActivity = () => {
+    if (!homeTaskRef.current) return;
+    homeTaskRef.current = null;
+    homeActivityRef.current = '';
+    setHomeTask(null);
+    setHomeActivity('');
+    setStatus((s) => ({ ...s, message: 'You stopped the activity before it was completed. No rewards were applied.' }));
+  };
+  useEffect(() => {
+    if (!homeTask) return;
+    const task = homeTask;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      if (now >= task.endsAt) {
+        window.clearInterval(timer);
+        homeTaskRef.current = null;
+        homeActivityRef.current = '';
+        setHomeTask(null);
+        setHomeActivity('');
+        completeHomeActivity(task);
+      } else {
+        const progress = Math.min(99, Math.round(((now - task.startedAt) / (task.endsAt - task.startedAt)) * 100));
+        setHomeTask((current) => current?.startedAt === task.startedAt ? { ...current, progress } : current);
+      }
+    }, 200);
+    return () => window.clearInterval(timer);
+  }, [homeTask?.startedAt]);
   const selectHomeObjectAt = (clientX: number, clientY: number) => {
     if (!insideHome || !cameraRef.current || !hostRef.current) return;
     const canvas = hostRef.current.querySelector('canvas'); if (!canvas) return;
@@ -1010,7 +1067,7 @@ function App() {
       const inputX = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
       const inputZ = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
       const direction = new THREE.Vector3(inputX, 0, inputZ);
-      if (direction.lengthSq() > 0.01) {
+      if (!homeTaskRef.current && direction.lengthSq() > 0.01) {
         direction.normalize();
         const currentNeeds = needsRef.current;
         const energyFactor = currentNeeds.energy < 15 ? 0.62 : currentNeeds.energy < 35 ? 0.82 : 1;
@@ -1028,7 +1085,14 @@ function App() {
         if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
         player.rotation.y = Math.atan2(direction.x, direction.z);
       }
-      if(homeActivityRef.current==='dance'){player.position.y=0.08+Math.abs(Math.sin(elapsed*8))*0.16;player.rotation.z=Math.sin(elapsed*8)*0.12;}else if(homeActivityRef.current==='sit'||homeActivityRef.current==='movie'){player.position.y=-0.18;player.rotation.z=0;}else{player.position.y=0;player.rotation.z=0;}
+      const homePose = homeActivityRef.current;
+      if (homePose === 'dance') { player.position.y = 0.08 + Math.abs(Math.sin(elapsed * 8)) * 0.16; player.rotation.z = Math.sin(elapsed * 8) * 0.12; player.rotation.x = Math.cos(elapsed * 8) * 0.05; }
+      else if (homePose === 'sit' || homePose === 'movie') { player.position.y = -0.18 + Math.sin(elapsed * 2) * 0.015; player.rotation.z = 0; player.rotation.x = 0.04; }
+      else if (homePose === 'sleep') { player.position.y = -0.2 + Math.sin(elapsed * 1.4) * 0.018; player.rotation.z = 0.025; player.rotation.x = 0.08; }
+      else if (homePose === 'cook') { player.position.y = Math.abs(Math.sin(elapsed * 3.2)) * 0.035; player.rotation.z = Math.sin(elapsed * 3.2) * 0.045; player.rotation.x = -0.06; }
+      else if (homePose === 'shower' || homePose === 'use-toilet') { player.position.y = -0.08 + Math.sin(elapsed * 3.5) * 0.025; player.rotation.z = Math.sin(elapsed * 2.5) * 0.025; player.rotation.x = 0.03; }
+      else if (homePose === 'read-hustle' || homePose === 'read-charisma') { player.position.y = Math.sin(elapsed * 1.8) * 0.012; player.rotation.z = 0; player.rotation.x = 0.07; }
+      else { player.position.y = 0; player.rotation.z = 0; player.rotation.x = 0; }
       target.set(player.position.x, 1.2, player.position.z);
       const look = cameraLookRef.current;
       const orbitDistance = isInsideRef.current ? 8 : 10;
@@ -1187,7 +1251,7 @@ function App() {
         {nearbyResident && !talkingTo && !shopOpen && !homeOpen && !jobOpen && <button className="resident-interact-prompt" onClick={() => { setTalkingTo(nearbyResident); setDialogueLine(nearbyResident.greeting); }}>💬 TALK TO {nearbyResident.name.toUpperCase()} <span>{nearbyResident.role} · Tap to greet</span></button>}
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
         {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); homeActivityRef.current=''; setHomeActivity(''); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
-        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); homeActivityRef.current=''; setHomeActivity(''); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
+        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" disabled={Boolean(homeTask)} onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); homeActivityRef.current=''; setHomeActivity(''); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
         {wardrobeOpen && <div className="shop-backdrop" role="presentation"><section className="wardrobe-panel" role="dialog" aria-modal="true" aria-label="Character wardrobe">
           <div className="shop-heading"><div><small>EKITI LIFESTYLE · YOUR IDENTITY</small><h2>Character Studio</h2><p>Make your resident look and feel like you.</p></div><button className="shop-close" onClick={() => setWardrobeOpen(false)} aria-label="Close character studio">×</button></div>
           <label className="wardrobe-name">YOUR NAME<input maxLength={18} value={playerLook.name} onChange={(e) => updatePlayerLook({ name: e.target.value })} placeholder="Enter character name" /></label>
@@ -1243,8 +1307,9 @@ function App() {
           <section className="life-section"><h3>🚕 Transport</h3><p>{vehicleOwned?'You own a personal car.':'No personal vehicle yet. Taxis are available around the city.'}</p><div className="life-actions"><button onClick={takeTaxi} disabled={wallet<500||insideHome}>Take taxi · ₦500</button><button onClick={buyVehicle} disabled={vehicleOwned||wallet<80000}>{vehicleOwned?'Car owned ✓':'Buy car · ₦80,000'}</button></div></section>
           <section className="life-section"><h3>🎓 Education</h3><p>{enrolledCampus? `Enrolled at ${enrolledCampus} · ${studentCourse}`:'Visit UNAD or Ado Poly and enrol in a course.'}</p><p>Study credits: <b>{studyCredits}/5</b> · Exam: <b>{examPassed?'Passed':'Not yet passed'}</b> · Graduation: <b>{graduated?'Completed':'In progress'}</b></p>{enrolledCampus&&<button className="life-action" disabled={!examPassed||graduated} onClick={()=>{setGraduated(true);setStatus(v=>({...v,message:`Congratulations! You graduated in ${studentCourse} from ${enrolledCampus}.`}));}}>GRADUATE {examPassed?'🎓':'· PASS EXAM FIRST'}</button>}</section>
         </section></div>}
-                 {selectedHomeObject && insideHome && <div className="shop-backdrop" role="presentation"><section className="home-object-panel" role="dialog" aria-modal="true" aria-label={selectedHomeObject.name}><div className="shop-heading"><div><small>{selectedHomeObject.room.toUpperCase()} · HOME INTERACTION</small><h2>{selectedHomeObject.emoji} {selectedHomeObject.name}</h2><p>{selectedHomeObject.description}</p></div><button className="shop-close" onClick={() => setSelectedHomeObject(null)} aria-label="Close furniture actions">×</button></div><div className="home-object-actions">{selectedHomeObject.actions.map((item) => <button key={item.action} onClick={() => performFurnitureAction(item.action)}><span>▶</span><div><b>{item.label}</b><small>{item.detail}</small><small className="home-object-duration">{item.duration} · No charge</small></div></button>)}</div><div className="home-object-skills"><b>HOME SKILLS</b><span>Hustle {homeSkills.hustle}</span><span>Charisma {homeSkills.charisma}</span></div></section></div>}
-{homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Tap individual furniture in the 3D room to see its activities.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => { setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Tap a bed, sofa, television, kitchen fixture, shower or bookcase to interact.' })); }}><span>🪑</span><b>Select furniture</b><small>Tap objects in the room</small></button><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button><button onClick={()=>performHomeAction('sit')}><span>🛋️</span><b>Sit & relax</b><small>Use the sofa</small></button><button onClick={()=>performHomeAction('dance')}><span>💃</span><b>Dance</b><small>Move to music</small></button><button onClick={()=>performHomeAction('movie')}><span>📺</span><b>Watch movie</b><small>Movie night</small></button><button onClick={()=>{homeActivityRef.current='';setHomeActivity('');setStatus((s)=>({...s,message:'You stood up and are ready to move.'}));}}><span>🚶</span><b>Stand up</b><small>Return to movement</small></button></div>{homeActivity&&<div className="home-activity-status">CURRENT ACTIVITY: {homeActivity.toUpperCase()} · Choose Stand up to move again.</div>}<div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
+                 {homeTask && <div className="home-task-toast" role="status"><div className="home-task-copy"><small>HOME ACTIVITY IN PROGRESS</small><b>{homeTask.label}</b><span>{Math.max(0, Math.ceil((homeTask.endsAt - Date.now()) / 1000))} seconds remaining</span></div><div className="home-task-track"><i style={{ width: `${homeTask.progress}%` }} /></div><button onClick={cancelHomeActivity}>CANCEL</button></div>}
+                 {selectedHomeObject && insideHome && <div className="shop-backdrop" role="presentation"><section className="home-object-panel" role="dialog" aria-modal="true" aria-label={selectedHomeObject.name}><div className="shop-heading"><div><small>{selectedHomeObject.room.toUpperCase()} · HOME INTERACTION</small><h2>{selectedHomeObject.emoji} {selectedHomeObject.name}</h2><p>{selectedHomeObject.description}</p></div><button className="shop-close" onClick={() => setSelectedHomeObject(null)} aria-label="Close furniture actions">×</button></div><div className="home-object-actions">{selectedHomeObject.actions.map((item) => <button key={item.action} onClick={() => performFurnitureAction(item.action)}><span>▶</span><div><b>{item.label}</b><small>{item.detail}</small><small className="home-object-duration">{item.duration} · No charge</small></div></button>)}</div><div className="home-object-skills"><b>HOME PROGRESS · SAVED ON THIS DEVICE</b><span>Completed {homeProgress.completedActivities}</span><span>Hustle {homeSkills.hustle}</span><span>Charisma {homeSkills.charisma}</span><span>Last: {homeProgress.lastActivity || 'No activity yet'}</span></div></section></div>}
+{homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Tap individual furniture in the 3D room to see its activities.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => { setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Tap a bed, sofa, television, kitchen fixture, shower or bookcase to interact.' })); }}><span>🪑</span><b>Select furniture</b><small>Tap objects in the room</small></button><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button><button onClick={()=>performHomeAction('sit')}><span>🛋️</span><b>Sit & relax</b><small>Use the sofa</small></button><button onClick={()=>performHomeAction('dance')}><span>💃</span><b>Dance</b><small>Move to music</small></button><button onClick={()=>performHomeAction('movie')}><span>📺</span><b>Watch movie</b><small>Movie night</small></button><button onClick={()=>{homeActivityRef.current='';setHomeActivity('');setStatus((s)=>({...s,message:'You stood up and are ready to move.'}));}}><span>🚶</span><b>Stand up</b><small>Return to movement</small></button></div>{homeActivity&&<div className="home-activity-status">CURRENT ACTIVITY: {homeActivityLabels[homeActivity as HomeObjectAction]?.toUpperCase() || homeActivity.toUpperCase()} · Your character is busy until the activity finishes.</div>}<div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
         {marketOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label={marketNames[activeMarket]}><div className="shop-heading"><div><small>ADO-EKITI · OPEN MARKET</small><h2>{marketNames[activeMarket]}</h2><p>{['Foodstuff, grains and fresh produce','Clothing, fabrics and footwear','Household goods and kitchen supplies'][activeMarket]}</p></div><button className="shop-close" onClick={()=>setMarketOpen(false)} aria-label="Close market">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString('en-NG')}</strong></div><div className="shop-items">{marketProducts[activeMarket].map((item)=><article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id]||0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString('en-NG')}</strong><button onClick={()=>{if(wallet<item.price)return;setWallet(v=>v-item.price);setInventory(v=>({...v,[item.id]:(v[item.id]||0)+1}));setStatus(v=>({...v,message:`${item.name} purchased at ${marketNames[activeMarket]}.`}));}} disabled={wallet<item.price}>BUY</button></div></article>)}</div><p className="shop-note">Each market specialises in a different range of goods. Purchases are added to your bag.</p></section></div>}
         {campusOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label={`${activeCampus} campus`}><div className="shop-heading"><div><small>ADO-EKITI · CAMPUS LIFE</small><h2>{activeCampus}</h2><p>Explore campus life and build your education.</p></div><button className="shop-close" onClick={()=>setCampusOpen(false)} aria-label="Close campus">×</button></div><div className="job-offer"><span>🎓</span><div><b>{enrolledCampus===activeCampus?'You are enrolled here':'Become a student'}</b><small>{enrolledCampus===activeCampus?'Attend lessons, pass your exam and graduate.':'Choose this institution and a course to begin your studies.'}</small><strong>{studyCredits} study credits · {examPassed?'Exam passed':'Exam pending'}</strong></div></div>{enrolledCampus!==activeCampus?<><label className="course-label">CHOOSE YOUR COURSE<select value={studentCourse} onChange={e=>setStudentCourse(e.target.value)}><option>Business Administration</option><option>Computer Science</option><option>Mass Communication</option><option>Accounting</option><option>Public Administration</option><option>Computer Engineering</option></select></label><button className="start-shift" onClick={()=>{setEnrolledCampus(activeCampus);setStudyCredits(0);setExamPassed(false);setGraduated(false);setStatus(v=>({...v,message:`You enrolled at ${activeCampus} to study ${studentCourse}. Your student journey begins!`}));}}>ENROL AT {activeCampus.toUpperCase()}</button></>:<><div className="job-requirements"><b>STUDENT LIFE</b><span>Attend classes to earn study credits.</span><span>Classes use some energy and advance your daily routine.</span><span>Earn 5 credits, pass your course assessment and graduate.</span></div><button className="start-shift" onClick={()=>{setStudyCredits(v=>v+1);setNeeds(n=>({...n,energy:Math.max(0,n.energy-8),hunger:Math.max(0,n.hunger-3),fun:Math.max(0,n.fun-2),bladder:Math.max(0,n.bladder-2)}));setStatus(v=>({...v,message:`Class completed at ${activeCampus}. You earned 1 study credit.`}));setCampusOpen(false);}}>ATTEND CLASS · EARN 1 CREDIT</button><button className="campus-switch" disabled={studyCredits<5||examPassed} onClick={sitExam}>SIT COURSE EXAM · 5 CREDITS</button>{examPassed&&<p className="course-success">Course exam passed. Visit your Life Hub to graduate.</p>}<button className="campus-switch" onClick={()=>{setEnrolledCampus('');setStudyCredits(0);setExamPassed(false);setGraduated(false);}}>LEAVE THIS INSTITUTION</button></>}</section></div>}
         {shopOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label="Neighbourhood kiosk"><div className="shop-heading"><div><small>ADO-EKITI · STREET KIOSK</small><h2>Neighbourhood Store</h2><p>Pick up something for the road.</p></div><button className="shop-close" onClick={() => setShopOpen(false)} aria-label="Close shop">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString("en-NG")}</strong></div><div className="shop-items">{shopItems.map((item) => <article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id] || 0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString("en-NG")}</strong><button onClick={() => buyItem(item)} disabled={wallet < item.price}>BUY</button></div></article>)}</div><p className="shop-note">Prototype purchases update your demo wallet and bag for this session.</p></section></div> }
