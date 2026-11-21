@@ -100,3 +100,9 @@ button{font:inherit}
 .home-activity-status{margin-top:12px;padding:10px;border-radius:9px;background:#d6a85e18;color:#f1d08c;font-size:9px;font-weight:800}
 .home-panel{width:min(560px,100%)}
 @media(max-width:700px){.city-map-toggle{top:10px;right:9px;padding:9px 11px;font-size:9px}.city-map-panel{padding:15px}.city-map-canvas{height:290px}.auto-travel-banner{top:102px;font-size:8px;padding:8px 10px}.map-shortcuts{grid-template-columns:1fr 1fr}}
+
+
+.market-interact-prompt,.campus-interact-prompt{position:absolute;left:50%;top:43%;transform:translate(-50%,-50%);z-index:6;border:1px solid #d6c18a;background:#17251eed;color:#f7e7c6;border-radius:14px;padding:13px 18px;font-weight:900;letter-spacing:.6px;box-shadow:0 12px 32px #0006;cursor:pointer;white-space:nowrap}
+.market-interact-prompt span,.campus-interact-prompt span{display:block;margin-top:4px;color:#c0cbbf;font-size:10px;font-weight:500;letter-spacing:0}
+.campus-switch{width:100%;margin-top:9px;border:1px solid #ffffff24;border-radius:10px;padding:11px;background:#ffffff0b;color:#e8dfce;font-size:10px;font-weight:800;cursor:pointer}
+@media(max-width:700px){.market-interact-prompt,.campus-interact-prompt{top:39%;padding:11px 13px;font-size:10px;max-width:92%;white-space:normal;text-align:center}}
