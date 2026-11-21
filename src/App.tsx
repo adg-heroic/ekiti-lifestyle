@@ -34,60 +34,81 @@ function addTree(scene: THREE.Scene, x: number, z: number) {
 
 function buildWorld(scene: THREE.Scene) {
   scene.background = new THREE.Color('#a9d6dc');
-  scene.fog = new THREE.Fog('#a9d6dc', 28, 75);
+  scene.fog = new THREE.Fog('#a9d6dc', 34, 92);
+  const colliders: Array<{ x: number; z: number; halfX: number; halfZ: number }> = [];
+  const block = (x: number, z: number, w: number, d: number) => colliders.push({ x, z, halfX: w / 2, halfZ: d / 2 });
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), makeMaterial('#8eb879'));
+  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), makeMaterial('#8eb879'));
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  // Main neighbourhood road and a cross street create a connected, walkable street grid.
+  addBox(scene, 0, 0.015, -10, 92, 0.06, 7, '#555b59');
+  addBox(scene, 0, 0.05, -10, 92, 0.025, 0.12, '#e9d9a8');
+  addBox(scene, 0, 0.025, -5.4, 92, 0.05, 1.2, '#c9b995');
+  addBox(scene, 0, 0.025, -14.6, 92, 0.05, 1.2, '#c9b995');
+  for (let x = -42; x < 48; x += 8) addBox(scene, x, 0.055, -10, 3.2, 0.025, 0.12, '#f4e7bd');
+  addBox(scene, -25, 0.015, -29, 6, 0.06, 38, '#555b59');
+  addBox(scene, -25, 0.05, -29, 0.12, 0.025, 38, '#e9d9a8');
+  addBox(scene, -20.4, 0.025, -29, 1.2, 0.05, 38, '#c9b995');
+  addBox(scene, -29.6, 0.025, -29, 1.2, 0.05, 38, '#c9b995');
 
-  // A broad local road with sandy shoulders and a simple paved footpath.
-  addBox(scene, 0, 0.015, -10, 80, 0.06, 7, '#555b59');
-  addBox(scene, 0, 0.05, -10, 80, 0.025, 0.12, '#e9d9a8');
-  addBox(scene, 0, 0.025, -5.4, 80, 0.05, 1.2, '#c9b995');
-  addBox(scene, 0, 0.025, -14.6, 80, 0.05, 1.2, '#c9b995');
-  for (let x = -34; x < 38; x += 8) addBox(scene, x, 0.055, -10, 3.2, 0.025, 0.12, '#f4e7bd');
-
-  // Starter home: cream walls, terracotta roof, porch and front door.
-  addBox(scene, 0, 0, 2.8, 9, 3.4, 7, '#e8d7b6');
+  // Starter home, porch and yard.
+  addBox(scene, 0, 0, 2.8, 9, 3.4, 7, '#e8d7b6'); block(0, 2.8, 9.5, 7.5);
   const roof = new THREE.Mesh(new THREE.ConeGeometry(6.7, 2.6, 4), makeMaterial('#a9573e'));
-  roof.rotation.y = Math.PI / 4;
-  roof.scale.z = 0.82;
-  roof.position.set(0, 4.55, 2.8);
-  roof.castShadow = true;
-  scene.add(roof);
+  roof.rotation.y = Math.PI / 4; roof.scale.z = 0.82; roof.position.set(0, 4.55, 2.8); roof.castShadow = true; scene.add(roof);
   addBox(scene, 0, 0, -1.05, 3.2, 0.18, 1.25, '#b78b62');
   addBox(scene, 0, 0.18, -1.45, 0.9, 1.8, 0.12, '#70472f');
   addBox(scene, -2.65, 1.35, -0.76, 1.25, 0.9, 0.12, '#8fc4d0');
   addBox(scene, 2.65, 1.35, -0.76, 1.25, 0.9, 0.12, '#8fc4d0');
 
-  // Yard fence and entrance gap.
+  // Low compound wall with a wide, deliberate entrance.
+  addBox(scene, -4.9, 0, 7.1, 6.2, 0.75, 0.12, '#d9c39b');
+  addBox(scene, 4.9, 0, 7.1, 6.2, 0.75, 0.12, '#d9c39b');
   for (let x = -8; x <= 8; x += 1.5) {
     if (Math.abs(x) < 1.4) continue;
     addBox(scene, x, 0, 7.1, 0.12, 0.9, 0.12, '#e6d5b4');
+    block(x, 7.1, 0.35, 0.35);
   }
-  addBox(scene, -4.9, 0, 7.1, 6.2, 0.75, 0.12, '#d9c39b');
-  addBox(scene, 4.9, 0, 7.1, 6.2, 0.75, 0.12, '#d9c39b');
+  block(-4.9, 7.1, 6.2, 0.3); block(4.9, 7.1, 6.2, 0.3);
 
-  // Neighbouring homes establish the beginning of a larger street.
-  addBox(scene, -13, 0, 1.8, 6.5, 2.8, 5.8, '#d6b28c');
-  const roofLeft = new THREE.Mesh(new THREE.ConeGeometry(5, 1.8, 4), makeMaterial('#647b68'));
-  roofLeft.rotation.y = Math.PI / 4; roofLeft.position.set(-13, 3.7, 1.8); scene.add(roofLeft);
-  addBox(scene, 14, 0, 2.1, 7, 3, 6, '#d9c8a3');
-  const roofRight = new THREE.Mesh(new THREE.ConeGeometry(5.4, 2, 4), makeMaterial('#8c5541'));
-  roofRight.rotation.y = Math.PI / 4; roofRight.position.set(14, 3.9, 2.1); scene.add(roofRight);
+  // Distinct homes along the side streets.
+  const home = (x: number, z: number, w: number, d: number, wall: string, roofColor: string) => {
+    addBox(scene, x, 0, z, w, 2.8, d, wall); block(x, z, w + 0.7, d + 0.7);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.66, 1.8, 4), makeMaterial(roofColor));
+    cap.rotation.y = Math.PI / 4; cap.position.set(x, 3.7, z); cap.castShadow = true; scene.add(cap);
+    addBox(scene, x - w * 0.22, 1.2, z - d / 2 - 0.07, 1.05, 0.85, 0.12, '#8fc4d0');
+    addBox(scene, x + w * 0.22, 1.2, z - d / 2 - 0.07, 1.05, 0.85, 0.12, '#8fc4d0');
+  };
+  home(-14, 1.8, 6.5, 5.8, '#d6b28c', '#647b68');
+  home(14, 2.1, 7, 6, '#d9c8a3', '#8c5541');
+  home(-35, -23, 7, 6, '#e2c49b', '#9b6047');
+  home(-14, -27, 7.5, 6, '#cdbb9a', '#6e8061');
+  home(13, -26, 7, 6, '#dfc6a5', '#a45f43');
+  home(35, -24, 7, 6, '#d4b18d', '#667b69');
 
-  for (const [x, z] of [[-10, -3], [10, -3], [-18, -15], [18, -16], [-18, 9], [19, 9], [-7, 14], [8, 15]] as number[][]) {
-    addTree(scene, x, z);
+  // Roadside kiosks and small shopfronts.
+  const shop = (x: number, z: number, wall: string, sign: string) => {
+    addBox(scene, x, 0, z, 3.5, 2.5, 2.8, wall); block(x, z, 4.1, 3.4);
+    addBox(scene, x, 2.5, z, 4.1, 0.22, 3.3, '#4e7655');
+    addBox(scene, x, 1.55, z - 1.45, 2.5, 0.42, 0.12, sign);
+    addBox(scene, x, 0.9, z - 1.48, 2.2, 0.75, 0.1, '#6b9a85');
+  };
+  shop(7.2, -6.5, '#d5a36e', '#f0d18e');
+  shop(-7.5, -6.5, '#c98f65', '#e7c37e');
+  shop(7, -18, '#d8bd91', '#e7c37e');
+
+  // Trees are kept out of the street corridor and have simple no-walk zones.
+  const treeSpots = [[-18,-3],[18,-3],[-40,-13],[-35,-8],[-13,-17],[14,-17],[39,-14],[-40,-34],[-13,-37],[13,-36],[39,-34],[-18,12],[19,12],[-8,17],[9,17]] as number[][];
+  for (const [x, z] of treeSpots) { addTree(scene, x, z); block(x, z, 1.8, 1.8); }
+
+  // Streetlights and simple roadside planting add scale without heavy assets.
+  for (const [x,z] of [[-18,-10],[18,-10],[-25,-18],[-25,-37]] as number[][]) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.1,4,6), makeMaterial('#46534a'));
+    pole.position.set(x,2,z); scene.add(pole);
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.65,0.12,0.28), makeMaterial('#e8d8a5'));
+    lamp.position.set(x,4,z); scene.add(lamp); block(x,z,0.7,0.7);
   }
-
-  // A small roadside kiosk, the first future interaction point.
-  addBox(scene, 7.2, 0, -6.5, 3.2, 2.5, 2.4, '#d5a36e');
-  addBox(scene, 7.2, 2.5, -6.5, 3.8, 0.22, 3, '#4e7655');
-  addBox(scene, 7.2, 1.2, -5.25, 2.1, 0.85, 0.12, '#6b9a85');
-  return { kiosk: new THREE.Vector3(7.2, 0, -6.5) };
+  return { kiosk: new THREE.Vector3(7.2, 0, -6.5), colliders };
 }
-
 function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const joystickRef = useRef<HTMLDivElement>(null);
@@ -129,7 +150,7 @@ function App() {
     sun.shadow.camera.top = 24; sun.shadow.camera.bottom = -24;
     scene.add(sun);
 
-    const { kiosk } = buildWorld(scene);
+    const { kiosk, colliders } = buildWorld(scene);
     const player = new THREE.Group();
     const skin = makeMaterial('#8f573b');
     const shirt = makeMaterial('#287f70');
@@ -178,9 +199,17 @@ function App() {
       const direction = new THREE.Vector3(inputX, 0, inputZ);
       if (direction.lengthSq() > 0.01) {
         direction.normalize();
-        player.position.addScaledVector(direction, delta * 5.2);
-        player.position.x = THREE.MathUtils.clamp(player.position.x, -35, 35);
-        player.position.z = THREE.MathUtils.clamp(player.position.z, -24, 24);
+        const stepX = direction.x * delta * 5.2;
+        const stepZ = direction.z * delta * 5.2;
+        const canStandAt = (x: number, z: number) =>
+          x >= -45 && x <= 45 && z >= -48 && z <= 22 &&
+          !colliders.some((obstacle) =>
+            Math.abs(x - obstacle.x) < obstacle.halfX + 0.42 &&
+            Math.abs(z - obstacle.z) < obstacle.halfZ + 0.42
+          );
+        // Resolve each axis separately so the player can slide along walls.
+        if (canStandAt(player.position.x + stepX, player.position.z)) player.position.x += stepX;
+        if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
         player.rotation.y = Math.atan2(direction.x, direction.z);
       }
       target.set(player.position.x, 1.2, player.position.z);
