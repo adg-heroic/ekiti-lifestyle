@@ -463,6 +463,42 @@ function App() {
     const observer = new ResizeObserver(resize);
     observer.observe(host);
 
+    // Grid-based navigation lets residents route around buildings and trees.
+    const findResidentPath = (startX: number, startZ: number, targetX: number, targetZ: number, blockedAt: (x: number, z: number) => boolean): Array<[number, number]> => {
+      const step = 1.5, minX = -45, minZ = -48, maxI = 60, maxJ = 48;
+      const cell = (x: number, z: number) => ({ i: THREE.MathUtils.clamp(Math.round((x - minX) / step), 0, maxI), j: THREE.MathUtils.clamp(Math.round((z - minZ) / step), 0, maxJ) });
+      const point = (i: number, j: number): [number, number] => [minX + i * step, minZ + j * step];
+      const start = cell(startX, startZ), startKey = start.i + ',' + start.j;
+      const queue: Array<{ i: number; j: number }> = [start];
+      const previous = new Map<string, string | null>([[startKey, null]]);
+      const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      let found: string | null = null;
+      for (let cursor = 0; cursor < queue.length; cursor++) {
+        const current = queue[cursor], key = current.i + ',' + current.j;
+        const [x, z] = point(current.i, current.j);
+        if (Math.hypot(x - targetX, z - targetZ) <= step * 0.8) { found = key; break; }
+        for (const [di, dj] of directions) {
+          const i = current.i + di, j = current.j + dj;
+          if (i < 0 || i > maxI || j < 0 || j > maxJ) continue;
+          const nextKey = i + ',' + j;
+          if (previous.has(nextKey)) continue;
+          const [nx, nz] = point(i, j);
+          if (blockedAt(nx, nz)) continue;
+          previous.set(nextKey, key);
+          queue.push({ i, j });
+        }
+      }
+      if (!found) return [];
+      const path: Array<[number, number]> = [];
+      let cursor: string | null = found;
+      while (cursor && cursor !== startKey) {
+        const [i, j] = cursor.split(',').map(Number);
+        path.push(point(i, j));
+        cursor = previous.get(cursor) ?? null;
+      }
+      return path.reverse();
+    };
+
     const animate = () => {
       if (!active) return;
       frame = requestAnimationFrame(animate);
@@ -489,9 +525,7 @@ function App() {
         };
         const profile = resident.userData.profile as ResidentProfile;
         const playerDistance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
-        const nearbyPerson = pedestrians.some((other) => other !== resident &&
-          Math.hypot(other.position.x - resident.position.x, other.position.z - resident.position.z) < 1.05);
-        const shouldPause = playerDistance < 2.7 || nearbyPerson;
+        const shouldPause = playerDistance < 2.7;
         const facingPlayer = playerDistance < 2.7;
         let gait = 0;
 
@@ -507,30 +541,30 @@ function App() {
         else if (profile.id === 2) destination = daytime ? [-11, -3.2] : [-9, 9.5];
         else if (profile.id === 3) destination = daytime ? [-25, -18] : [-9, 9.5];
         else destination = daytime ? deliveryStops[Math.floor(elapsed / 24) % deliveryStops.length] : [-9, 9.5];
+
+        const navigation = resident.userData as typeof resident.userData & { navTarget?: string; navPath?: Array<[number, number]>; navIndex?: number };
+        const targetKey = destination[0] + ',' + destination[1];
+        if (navigation.navTarget !== targetKey) {
+          navigation.navTarget = targetKey;
+          navigation.navPath = findResidentPath(resident.position.x, resident.position.z, destination[0], destination[1], blockedAt);
+          navigation.navIndex = 0;
+        }
         if (facingPlayer) {
           resident.rotation.y = Math.atan2(player.position.x - resident.position.x, player.position.z - resident.position.z);
-        } else if (!nearbyPerson) {
-          const dx = destination[0] - resident.position.x;
-          const dz = destination[1] - resident.position.z;
+        } else {
+          const path = navigation.navPath ?? [];
+          let pathIndex = navigation.navIndex ?? 0;
+          while (pathIndex < path.length && Math.hypot(path[pathIndex][0] - resident.position.x, path[pathIndex][1] - resident.position.z) < 0.65) pathIndex++;
+          navigation.navIndex = pathIndex;
+          const waypoint = path[pathIndex] ?? destination;
+          const dx = waypoint[0] - resident.position.x, dz = waypoint[1] - resident.position.z;
           const distance = Math.hypot(dx, dz);
-          if (distance > 0.45) {
-            const step = Math.min(distance, delta * (profile.id === 4 ? 2.25 : 1.8));
-            const nextX = resident.position.x + (dx / distance) * step;
-            const nextZ = resident.position.z + (dz / distance) * step;
-            if (!blockedAt(nextX, nextZ)) {
-              resident.position.x = nextX;
-              resident.position.z = nextZ;
-              resident.rotation.y = Math.atan2(dx, dz);
-              gait = Math.sin(elapsed * 7 + phase * 12);
-            } else {
-              const sideSteps: Array<[number, number]> = [[nextX, resident.position.z], [resident.position.x, nextZ]];
-              const clearStep = sideSteps.find(([x, z]) => !blockedAt(x, z));
-              if (clearStep) {
-                resident.position.set(clearStep[0], 0, clearStep[1]);
-                resident.rotation.y = Math.atan2(dx, dz);
-                gait = Math.sin(elapsed * 7 + phase * 12);
-              }
-            }
+          if (distance > 0.18) {
+            const movement = Math.min(distance, delta * (profile.id === 4 ? 2.25 : 1.8));
+            resident.position.x += (dx / distance) * movement;
+            resident.position.z += (dz / distance) * movement;
+            resident.rotation.y = Math.atan2(dx, dz);
+            gait = Math.sin(elapsed * 7 + phase * 12);
           }
         }
         leftLeg.rotation.x = gait * 0.38;
