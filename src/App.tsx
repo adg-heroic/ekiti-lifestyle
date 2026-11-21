@@ -220,6 +220,55 @@ function buildWorld(scene: THREE.Scene) {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), makeMaterial('#8eb879'));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
+  // A small public square gives the neighbourhood a recognisable social meeting point.
+  addBox(scene, 24, 0.025, 8, 18, 0.12, 13, '#c5ad83');
+  addBox(scene, 24, 2.7, 8, 9, 0.18, 5, '#9b573d');
+  for (const x of [20, 28]) for (const z of [6, 10]) addBox(scene, x, 0.12, z, 0.18, 2.55, 0.18, '#76513a');
+  addBox(scene, 24, 0.16, 13.2, 6, 0.42, 0.45, '#76513a');
+  addBox(scene, 24, 0.62, 13.2, 6, 0.12, 0.5, '#c28d56');
+  addBox(scene, 24, 0.16, 3.4, 5.5, 0.42, 0.45, '#76513a');
+  addBox(scene, 24, 0.62, 3.4, 5.5, 0.12, 0.5, '#c28d56');
+  addBox(scene, 24, 0.12, 8, 1.1, 0.22, 1.1, '#d5a85f');
+  addBox(scene, 24, 0.34, 8, 0.72, 0.22, 0.72, '#f0d6a2');
+
+  // Original low-poly traffic vehicles travel along the main road in both directions.
+  const trafficCars: Array<{ group: THREE.Group; speed: number; wheels: THREE.Mesh[] }> = [];
+  const createTrafficCar = (x: number, z: number, color: string, speed: number) => {
+    const group = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.72, 1.35), makeMaterial(color));
+    body.position.y = 0.72; body.castShadow = true; group.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.62, 1.12), makeMaterial('#b7d3d2', 0.35));
+    cabin.position.set(-0.1, 1.36, 0); cabin.castShadow = true; group.add(cabin);
+    const wheels: THREE.Mesh[] = [];
+    for (const wx of [-0.78, 0.82]) for (const wz of [-0.72, 0.72]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.16, 12), makeMaterial('#242625'));
+      wheel.rotation.x = Math.PI / 2; wheel.position.set(wx, 0.34, wz); group.add(wheel); wheels.push(wheel);
+    }
+    const lampMaterial = makeMaterial('#f5e4ad');
+    for (const wz of [-0.42, 0.42]) {
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.16, 0.22), lampMaterial);
+      lamp.position.set(1.27, 0.78, wz); group.add(lamp);
+    }
+    group.position.set(x, 0, z); scene.add(group);
+    trafficCars.push({ group, speed, wheels });
+  };
+  createTrafficCar(-35, -8.1, '#d7b34e', 7.2);
+  createTrafficCar(12, -11.8, '#477d9a', -6.1);
+  createTrafficCar(39, -8.1, '#a9513f', 5.4);
+  createTrafficCar(-8, -11.8, '#e0ded5', -7.0);
+
+  // Lightweight rain particles are kept dormant until the player switches the weather.
+  const rainPositions = new Float32Array(180 * 3);
+  for (let i = 0; i < 180; i++) {
+    rainPositions[i * 3] = (Math.random() - 0.5) * 70;
+    rainPositions[i * 3 + 1] = Math.random() * 22;
+    rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 70;
+  }
+  const rainGeometry = new THREE.BufferGeometry();
+  rainGeometry.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+  const rain = new THREE.Points(rainGeometry, new THREE.PointsMaterial({ color: '#d9efff', size: 0.075, transparent: true, opacity: 0.72 }));
+  rain.visible = false; scene.add(rain);
+
   // Main neighbourhood road and a cross street create a connected, walkable street grid.
   addBox(scene, 0, 0.015, -10, 92, 0.06, 7, '#555b59');
   addBox(scene, 0, 0.05, -10, 92, 0.025, 0.12, '#e9d9a8');
@@ -348,7 +397,7 @@ function buildWorld(scene: THREE.Scene) {
     const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.65,0.12,0.28), makeMaterial('#e8d8a5'));
     lamp.position.set(x,4,z); scene.add(lamp); block(x,z,0.7,0.7);
   }
-  return { kiosk: new THREE.Vector3(7.2, 0, -6.5), colliders };
+  return { kiosk: new THREE.Vector3(7.2, 0, -6.5), colliders, trafficCars, rain };
 }
 function App() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -372,6 +421,9 @@ function App() {
   const [homeOpen, setHomeOpen] = useState(false);
   const [insideHome, setInsideHome] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
+  const [weather, setWeather] = useState<'sunny' | 'rainy'>('sunny');
+  const weatherRef = useRef<'sunny' | 'rainy'>('sunny');
+  useEffect(() => { weatherRef.current = weather; }, [weather]);
   const [autoTravel, setAutoTravel] = useState(false);
   const [homeActivity, setHomeActivity] = useState('');
   const autoDestinationRef = useRef<{x:number;z:number}|null>(null);
@@ -554,7 +606,7 @@ function App() {
     sun.shadow.camera.top = 24; sun.shadow.camera.bottom = -24;
     scene.add(sun);
 
-    const { kiosk, colliders } = buildWorld(scene);
+    const { kiosk, colliders, trafficCars, rain } = buildWorld(scene);
   const interior = buildStarterInterior(scene);
   interiorRef.current = interior;
     const player = new THREE.Group();
@@ -654,6 +706,27 @@ function App() {
       frame = requestAnimationFrame(animate);
       const delta = Math.min(clock.getDelta(), 0.04);
       const elapsed = clock.elapsedTime;
+      trafficCars.forEach(({ group, speed, wheels }) => {
+        group.position.x += speed * delta;
+        if (group.position.x > 50) group.position.x = -50;
+        if (group.position.x < -50) group.position.x = 50;
+        wheels.forEach((wheel) => { wheel.rotation.z += speed * delta * 1.8; });
+      });
+      rain.visible = weatherRef.current === 'rainy';
+      if (rain.visible) {
+        const rainAttribute = rain.geometry.getAttribute('position') as THREE.BufferAttribute;
+        const points = rainAttribute.array as Float32Array;
+        for (let i = 0; i < points.length; i += 3) {
+          points[i + 1] -= 19 * delta;
+          points[i] -= 2.2 * delta;
+          if (points[i + 1] < 0) {
+            points[i] = player.position.x + (Math.random() - 0.5) * 70;
+            points[i + 1] = 16 + Math.random() * 8;
+            points[i + 2] = player.position.z + (Math.random() - 0.5) * 70;
+          }
+        }
+        rainAttribute.needsUpdate = true;
+      }
       const totalGameMinutes = 8 * 60 + elapsed * 2;
       const gameMinutes = Math.floor(totalGameMinutes) % 1440;
       const gameHour = Math.floor(gameMinutes / 60);
@@ -874,7 +947,7 @@ function App() {
     <main className="game-shell">
       <header className="topbar">
         <div className="brand-lockup"><span className="brand-mark">E</span><div><strong>EKITI LIFESTYLE</strong><small>A LIFE IN ADO-EKITI</small></div></div>
-        <div className="topbar-actions"><button className="life-hub-toggle" onClick={() => setLifeHubOpen(true)}>👤 LIFE HUB</button><div className="day-chip"><span className="live-dot" /> ADO-EKITI <b>DAY {String(gameClock.day).padStart(2, '0')} · {String(gameClock.hour).padStart(2, '0')}:{String(gameClock.minute).padStart(2, '0')}</b></div></div>
+        <div className="topbar-actions"><button className="weather-toggle" onClick={() => setWeather(v => v === 'sunny' ? 'rainy' : 'sunny')}>{weather === 'sunny' ? '☀️ SUNNY' : '🌧️ RAINING'}</button><button className="life-hub-toggle" onClick={() => setLifeHubOpen(true)}>👤 LIFE HUB</button><div className="day-chip"><span className="live-dot" /> ADO-EKITI <b>DAY {String(gameClock.day).padStart(2, '0')} · {String(gameClock.hour).padStart(2, '0')}:{String(gameClock.minute).padStart(2, '0')}</b></div></div>
       </header>
       <section className="game-stage">
         <div className="world" ref={hostRef} aria-label="3D Ekiti Lifestyle world" />
