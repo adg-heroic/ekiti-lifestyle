@@ -130,3 +130,13 @@ button{font:inherit}
 
 .weather-toggle{border:1px solid #a9cde088;border-radius:10px;padding:10px 12px;background:#8dbbd01a;color:#e2f1f3;font-size:9px;font-weight:900;letter-spacing:.6px;cursor:pointer;white-space:nowrap}
 @media(max-width:700px){.weather-toggle{padding:8px 7px;font-size:8px}.topbar-actions{gap:5px}}
+
+
+/* Task 3 · expanded neighbourhood social life */
+.resident-social-status{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:11px 13px;border:1px solid #d6a85e44;border-radius:11px;background:#d6a85e12;color:#c8d6c9}
+.resident-social-status span{font-size:9px;font-weight:900;letter-spacing:1px}
+.resident-social-status strong{margin-left:auto;color:#f1d08c;font:700 18px 'Space Grotesk'}
+.resident-social-status small{color:#aebeb1;font-size:9px}
+.resident-panel{max-height:min(760px,92%);overflow:auto}
+.resident-topics button{display:flex;align-items:center;justify-content:space-between;gap:8px;line-height:1.4}
+@media(max-width:700px){.resident-social-status{gap:7px;padding:9px}.resident-social-status span{font-size:8px}.resident-social-status strong{font-size:16px}.resident-social-status small{font-size:8px}.resident-panel{max-height:88%;overflow:auto}.resident-topics button{font-size:10px;padding:10px}}
