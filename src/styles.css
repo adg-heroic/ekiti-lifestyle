@@ -68,3 +68,8 @@ button{font:inherit}
 .working-banner{position:absolute;left:50%;top:90px;transform:translateX(-50%);z-index:6;display:grid;gap:5px;min-width:210px;padding:12px 16px;border:1px solid #f1d08c77;border-radius:13px;background:#14231eea;box-shadow:0 8px 24px #0005;text-align:center}
 .working-banner span{color:#f1d08c;font-size:9px;font-weight:900;letter-spacing:1.2px}.working-banner b{font:700 20px 'Space Grotesk';color:#fff}.working-banner small{color:#aebeb1;font-size:9px}
 @media(max-width:700px){.job-panel{padding:17px;border-radius:17px}.job-interact-prompt{top:38%;padding:11px 15px;font-size:11px;white-space:nowrap}.working-banner{top:115px;min-width:190px;padding:9px 13px}.working-banner b{font-size:18px}}
+
+
+.interior-label{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:5;padding:9px 14px;border:1px solid #ffffff35;border-radius:99px;background:#17251edb;color:#f5e6c8;font-size:9px;font-weight:900;letter-spacing:1.4px;backdrop-filter:blur(10px);white-space:nowrap}
+.interior-exit{position:absolute;top:18px;right:18px;z-index:6;border:1px solid #f1d08c88;border-radius:10px;padding:10px 13px;background:#17251eed;color:#f1d08c;font-size:10px;font-weight:900;letter-spacing:.7px;cursor:pointer}
+@media(max-width:700px){.interior-label{top:62px;left:50%;font-size:8px;padding:7px 10px}.interior-exit{top:12px;right:10px;padding:9px 10px;font-size:9px}}
