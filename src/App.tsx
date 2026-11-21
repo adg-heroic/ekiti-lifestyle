@@ -481,7 +481,7 @@ function App() {
       sun.color.setHSL(0.10, 0.42, 0.58 + daylight * 0.25);
       currentSky.copy(nightSky).lerp(daySky, daylight);
       scene.background = currentSky;
-      scene.fog.color.copy(currentSky);
+      if (scene.fog) scene.fog.color.copy(currentSky);
       pedestrians.forEach((resident) => {
         const { phase, leftLeg, rightLeg, leftArm, rightArm } = resident.userData as {
           phase: number; leftLeg: THREE.Group; rightLeg: THREE.Group;
