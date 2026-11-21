@@ -248,8 +248,13 @@ function App() {
         rightLeg.rotation.x = -leftLeg.rotation.x;
         resident.position.y = Math.abs(Math.sin(elapsed * 7 + phase * 12)) * 0.035;
       });
-      const inputX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + moveRef.current.x;
-      const inputZ = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + moveRef.current.z;
+      // Translate movement into the camera's horizontal facing direction.
+      // This keeps joystick-forward moving toward the centre of the view after the player rotates the camera.
+      const localX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + moveRef.current.x;
+      const localZ = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + moveRef.current.z;
+      const yaw = cameraLookRef.current.yaw;
+      const inputX = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
+      const inputZ = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
       const direction = new THREE.Vector3(inputX, 0, inputZ);
       if (direction.lengthSq() > 0.01) {
         direction.normalize();
