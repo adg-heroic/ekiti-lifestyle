@@ -47,3 +47,11 @@ button{font:inherit}
 .home-actions button:active{background:#d6a85e22;border-color:#d6a85e}
 .home-inventory{margin-top:15px;padding:12px;border-radius:10px;background:#0e1b16;color:#c6d1c7;font-size:10px}
 @media(max-width:700px){.needs-panel{top:58px;left:9px;width:174px;padding:8px 9px;gap:6px}.need-row{grid-template-columns:58px 1fr 25px;gap:5px;font-size:7px}.need-row>b{font-size:7px}.need-track{height:5px}.home-panel{padding:17px;border-radius:17px}.home-actions{gap:6px;margin-top:18px}.home-actions button{padding:12px 5px;gap:6px}.home-actions button>span{font-size:23px}.home-actions button>b{font-size:10px}.home-actions button>small{font-size:8px}.home-interact-prompt{top:44%;padding:11px 15px;font-size:11px;white-space:nowrap}}
+
+.home-consumables{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:17px}
+.home-consumables>b{grid-column:1/-1;color:#d5ad6e;font-size:9px;letter-spacing:1.2px}
+.home-consumables button{display:flex;align-items:center;gap:7px;min-width:0;padding:10px;border:1px solid #ffffff20;border-radius:10px;background:#ffffff0b;color:#f5f2e9;font-size:10px;text-align:left;cursor:pointer}
+.home-consumables button>span{font-size:17px}
+.home-consumables button small{margin-left:auto;color:#d5ad6e;font-size:10px}
+.home-consumables button:disabled{opacity:.38;cursor:not-allowed}
+.home-consumables button:not(:disabled):active{border-color:#d6a85e;background:#d6a85e20}
