@@ -491,7 +491,6 @@ function App() {
   });
   const [phoneLikedPosts, setPhoneLikedPosts] = useState<number[]>([]);
   const [phoneNotice, setPhoneNotice] = useState('');
-  const [phoneChatOpen, setPhoneChatOpen] = useState(false);
   useEffect(() => { try { localStorage.setItem('ekiti-phone-messages-v1', JSON.stringify(phoneMessages)); } catch { /* local save is optional */ } }, [phoneMessages]);
   useEffect(() => { try { localStorage.setItem('ekiti-phone-posts-v1', JSON.stringify(phonePosts)); } catch { /* local save is optional */ } }, [phonePosts]);
   const sendPhoneMessage = () => {
