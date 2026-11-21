@@ -2,13 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 type Move = { x: number; z: number };
-type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean; nearJob: boolean; nearMarket: number; nearCampus: string };
+type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean; nearJob: boolean; nearMarket: number; nearCampus: string; nearGarage: boolean; nearOwnedVehicle: boolean };
 type Needs = { hunger: number; thirst: number; energy: number; fun: number; social: number; hygiene: number; bladder: number };
 type HomeObjectAction = 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie' | 'read-hustle' | 'read-charisma' | 'use-toilet';
 type HomeActivityTask = { action: HomeObjectAction; label: string; startedAt: number; endsAt: number; progress: number; ingredient?: 'snack' | 'fruit' };
 type SavedHomeProgress = { needs?: Partial<Needs>; homeSkills?: Partial<{ hustle: number; charisma: number }>; inventory?: Record<string, number>; completedActivities?: number; lastActivity?: string };
 type HomeObjectData = { id: string; name: string; room: string; description: string; emoji: string; actions: Array<{ label: string; detail: string; duration: string; action: HomeObjectAction }> };
 type PlacedFurniture = { id: string; catalogId: string; name: string; emoji: string; color: string; price: number; x: number; z: number; rotation: number };
+type OwnedVehicle = { id: string; modelId: string; name: string; color: string; price: number; upgrades: { engine: number; handling: number; tyres: number } };
+const vehicleCatalog = [
+  { id: 'city-hatch', name: 'City Hatchback', type: 'Compact', color: '#d6a343', price: 85000, emoji: '🚗', detail: 'Easy to handle and perfect for everyday trips.' },
+  { id: 'family-sedan', name: 'Family Sedan', type: 'Sedan', color: '#477d9a', price: 140000, emoji: '🚙', detail: 'More room and a comfortable ride around Ado-Ekiti.' },
+  { id: 'sport-coupe', name: 'Sport Coupe', type: 'Sport', color: '#a9513f', price: 220000, emoji: '🏎️', detail: 'A quicker ride with a bold street presence.' }
+];
 const furnitureCatalog = [
   { id: 'accent-chair', name: 'Accent Chair', emoji: '🪑', color: '#b87948', price: 1800, width: 1.05, height: 1.1, depth: 1.0, detail: 'A cosy extra seat for your living room.' },
   { id: 'coffee-table', name: 'Coffee Table', emoji: '🪵', color: '#805538', price: 2200, width: 1.5, height: 0.55, depth: 0.85, detail: 'A low table for your sitting area.' },
@@ -35,6 +41,25 @@ function addBox(scene: THREE.Scene, x: number, y: number, z: number, w: number, 
   mesh.receiveShadow = true;
   scene.add(mesh);
   return mesh;
+}
+
+function makeVehicleModel(color: string) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.68, 1.34), makeMaterial(color));
+  body.position.y = 0.68; body.castShadow = true; group.add(body);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.62, 1.12), makeMaterial('#b7d3d2', 0.35));
+  cabin.position.set(-0.08, 1.28, 0); cabin.castShadow = true; group.add(cabin);
+  const wheels: THREE.Mesh[] = [];
+  for (const wx of [-0.78, 0.82]) for (const wz of [-0.72, 0.72]) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.16, 12), makeMaterial('#242625));
+    wheel.rotation.x = Math.PI / 2; wheel.position.set(wx, 0.32, wz); group.add(wheel); wheels.push(wheel);
+  }
+  for (const wz of [-0.43, 0.43]) {
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.15, 0.2), makeMaterial('#f5e4ad'));
+    lamp.position.set(1.25, 0.72, wz); group.add(lamp);
+  }
+  group.userData.wheels = wheels;
+  return group;
 }
 
 function addTree(scene: THREE.Scene, x: number, z: number) {
@@ -284,6 +309,14 @@ function buildWorld(scene: THREE.Scene) {
   createTrafficCar(39, -8.1, '#a9513f', 5.4);
   createTrafficCar(-8, -11.8, '#e0ded5', -7.0);
 
+  // A small open-sided garage and dealership forecourt beside the neighbourhood.
+  addBox(scene, -18, 0.04, 14.8, 13, 0.22, 8.5, '#aaa79c');
+  addBox(scene, -18, 0, 10.4, 13, 3.2, 0.35, '#d9c39b');
+  addBox(scene, -24.2, 0, 14.7, 0.35, 3.2, 8.8, '#d9c39b');
+  addBox(scene, -11.8, 0, 14.7, 0.35, 3.2, 8.8, '#d9c39b');
+  addBox(scene, -18, 3.2, 14.7, 13.5, 0.28, 9.2, '#a9573e');
+  addBox(scene, -18, 3.48, 10.15, 7.5, 0.45, 0.2, '#f0d6a2');
+  addBox(scene, -18, 0.28, 18.75, 11.5, 0.12, 0.18, '#e8d8a5');
   // Lightweight rain particles are kept dormant until the player switches the weather.
   const rainPositions = new Float32Array(180 * 3);
   for (let i = 0; i < 180; i++) {
@@ -424,7 +457,7 @@ function buildWorld(scene: THREE.Scene) {
     const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.65,0.12,0.28), makeMaterial('#e8d8a5'));
     lamp.position.set(x,4,z); scene.add(lamp); block(x,z,0.7,0.7);
   }
-  return { kiosk: new THREE.Vector3(7.2, 0, -6.5), colliders, trafficCars, rain };
+  return { kiosk: new THREE.Vector3(7.2, 0, -6.5), garage: new THREE.Vector3(-18, 0, 15), colliders, trafficCars, rain };
 }
 function App() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -438,11 +471,14 @@ function App() {
   const cameraMovedRef = useRef(false);
   const outdoorObjectsRef = useRef<THREE.Object3D[]>([]);
   const playerRef = useRef<THREE.Group | null>(null);
+  const vehicleGroupsRef = useRef<Record<string, THREE.Group>>({});
+  const vehicleDrivingRef = useRef(false);
+  const selectedVehicleRef = useRef<string | null>(null);
   const cameraDragRef = useRef({ pointerId: -1, x: 0, y: 0 });
   const cameraLookRef = useRef({ yaw: 0, pitch: 0.62 });
   const moveRef = useRef<Move>({ x: 0, z: 0 });
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
-  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false, nearHome: false, nearJob: false, nearMarket: -1, nearCampus: '' });
+  const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false, nearHome: false, nearJob: false, nearMarket: -1, nearCampus: '', nearGarage: false, nearOwnedVehicle: false });
   const [shopOpen, setShopOpen] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
   const [activeMarket, setActiveMarket] = useState(0);
@@ -465,6 +501,16 @@ function App() {
   const [weather, setWeather] = useState<'sunny' | 'rainy'>('sunny');
   const weatherRef = useRef<'sunny' | 'rainy'>('sunny');
   useEffect(() => { weatherRef.current = weather; }, [weather]);
+  useEffect(() => { selectedVehicleRef.current = selectedVehicleId; }, [selectedVehicleId]);
+  useEffect(() => { vehicleDrivingRef.current = vehicleDriving; }, [vehicleDriving]);
+  useEffect(() => { try { localStorage.setItem('ekiti-owned-vehicles-v1', JSON.stringify(ownedVehicles)); if (selectedVehicleId) localStorage.setItem('ekiti-selected-vehicle-v1', selectedVehicleId); else localStorage.removeItem('ekiti-selected-vehicle-v1'); } catch { /* Garage saves are local to this device. */ } }, [ownedVehicles, selectedVehicleId]);
+  useEffect(() => {
+    Object.entries(vehicleGroupsRef.current).forEach(([id, group], index) => {
+      const owned = ownedVehicles.some((vehicle) => vehicle.modelId === id);
+      group.visible = owned;
+      if (id !== selectedVehicleId || !vehicleDriving) group.position.set(-21 + index * 3, 0, 15.2);
+    });
+  }, [ownedVehicles, selectedVehicleId, vehicleDriving]);
   const [autoTravel, setAutoTravel] = useState(false);
   const [homeActivity, setHomeActivity] = useState('');
   const [homeTask, setHomeTask] = useState<HomeActivityTask | null>(null);
@@ -488,6 +534,10 @@ function App() {
   const moodScore = Math.round((needs.hunger + needs.thirst + needs.energy + needs.fun + needs.social + needs.hygiene + needs.bladder) / 7);
   const moodLabel = moodScore >= 82 ? 'Excellent' : moodScore >= 65 ? 'Good' : moodScore >= 45 ? 'Okay' : moodScore >= 25 ? 'Low' : 'Miserable';
   const [wallet, setWallet] = useState(12000);
+  const [ownedVehicles, setOwnedVehicles] = useState<OwnedVehicle[]>(() => { try { return JSON.parse(localStorage.getItem('ekiti-owned-vehicles-v1') || '[]') as OwnedVehicle[]; } catch { return []; } });
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(() => { try { return localStorage.getItem('ekiti-selected-vehicle-v1'); } catch { return null; } });
+  const [garageOpen, setGarageOpen] = useState(false);
+  const [vehicleDriving, setVehicleDriving] = useState(false);
   const [lifeHubOpen, setLifeHubOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileTab, setProfileTab] = useState<'overview' | 'needs' | 'skills' | 'people' | 'career' | 'goals'>('overview');
@@ -576,7 +626,7 @@ function App() {
   const [bankSavings, setBankSavings] = useState(0);
   const [relationshipScores, setRelationshipScores] = useState<Record<string, number>>({ Bisi: 0, 'Mama Tola': 0, Tunde: 0, Kemi: 0, Ayo: 0, Sade: 0, Femi: 0, Kunle: 0, Zainab: 0, Dele: 0 });
   const [propertyLevel, setPropertyLevel] = useState(0);
-  const [vehicleOwned, setVehicleOwned] = useState(false);
+  const [vehicleOwned, setVehicleOwned] = useState(() => { try { return JSON.parse(localStorage.getItem('ekiti-owned-vehicles-v1') || '[]').length > 0; } catch { return false; } });
   const [studentCourse, setStudentCourse] = useState('Business Administration');
   const [examPassed, setExamPassed] = useState(false);
   const [graduated, setGraduated] = useState(false);
@@ -674,11 +724,57 @@ function App() {
     setPropertyLevel((level) => level + 1);
     setStatus((v) => ({ ...v, message: propertyLevel === 0 ? 'You upgraded to a better rented home. Your new place is secured!' : 'You purchased your first home. Welcome to property ownership!' }));
   };
-  const buyVehicle = () => {
-    if (vehicleOwned || wallet < 80000) return;
-    setWallet((cash) => cash - 80000);
+  const buyGarageVehicle = (modelId: string) => {
+    const model = vehicleCatalog.find((vehicle) => vehicle.id === modelId);
+    if (!model || ownedVehicles.some((vehicle) => vehicle.modelId === modelId)) return;
+    if (wallet < model.price) { setStatus((v) => ({ ...v, message: `You need ₦${(model.price - wallet).toLocaleString('en-NG')} more to buy the ${model.name}.` })); return; }
+    const owned: OwnedVehicle = { id: `${model.id}-${Date.now()}`, modelId: model.id, name: model.name, color: model.color, price: model.price, upgrades: { engine: 0, handling: 0, tyres: 0 } };
+    setWallet((cash) => cash - model.price);
+    setOwnedVehicles((items) => [...items, owned]);
+    setSelectedVehicleId(model.id);
     setVehicleOwned(true);
-    setStatus((v) => ({ ...v, message: 'You bought a personal car. Your city trips are now faster!' }));
+    setStatus((v) => ({ ...v, message: `${model.name} purchased! Your new vehicle is waiting in your garage.` }));
+  };
+  const enterOwnedVehicle = () => {
+    if (!selectedVehicleId || !vehicleGroupsRef.current[selectedVehicleId] || !playerRef.current || insideHome) return;
+    const car = vehicleGroupsRef.current[selectedVehicleId];
+    if (!car.visible) car.visible = true;
+    if (status.nearGarage && !vehicleDriving) playerRef.current.position.set(-18, 0, 15.2);
+    car.position.copy(playerRef.current.position);
+    car.visible = true;
+    playerRef.current.visible = false;
+    vehicleDrivingRef.current = true;
+    setVehicleDriving(true);
+    autoDestinationRef.current = null; autoPathRef.current = []; setAutoTravel(false);
+    setStatus((v) => ({ ...v, message: `You got into your ${ownedVehicles.find((item) => item.modelId === selectedVehicleId)?.name ?? 'vehicle'}. Use the joystick or WASD to drive.` }));
+  };
+  const exitOwnedVehicle = () => {
+    if (!playerRef.current || !selectedVehicleId) return;
+    const car = vehicleGroupsRef.current[selectedVehicleId];
+    vehicleDrivingRef.current = false;
+    setVehicleDriving(false);
+    playerRef.current.visible = true;
+    if (car) { playerRef.current.position.x = car.position.x + 1.7; playerRef.current.position.z = car.position.z + 0.6; }
+    setStatus((v) => ({ ...v, message: 'You stepped out of your vehicle.' }));
+  };
+  const parkOwnedVehicle = () => {
+    if (!playerRef.current || !selectedVehicleId || !status.nearGarage) return;
+    const car = vehicleGroupsRef.current[selectedVehicleId];
+    vehicleDrivingRef.current = false;
+    setVehicleDriving(false);
+    playerRef.current.visible = true;
+    playerRef.current.position.set(-26, 0, 15.2);
+    if (car) { car.position.set(-18, 0, 15.2); car.rotation.y = 0; car.visible = true; }
+    setStatus((v) => ({ ...v, message: 'Vehicle parked safely in your garage.' }));
+  };
+  const upgradeOwnedVehicle = (kind: 'engine' | 'handling' | 'tyres') => {
+    const current = ownedVehicles.find((vehicle) => vehicle.modelId === selectedVehicleId);
+    const level = current?.upgrades[kind] ?? 0;
+    const cost = (kind === 'engine' ? 24000 : kind === 'handling' ? 18000 : 14000) * (level + 1);
+    if (!current || level >= 3 || wallet < cost) return;
+    setWallet((cash) => cash - cost);
+    setOwnedVehicles((items) => items.map((vehicle) => vehicle.modelId === selectedVehicleId ? { ...vehicle, upgrades: { ...vehicle.upgrades, [kind]: level + 1 } } : vehicle));
+    setStatus((v) => ({ ...v, message: `${kind[0].toUpperCase() + kind.slice(1)} upgraded to level ${level + 1}.` }));
   };
   const takeTaxi = () => {
     if (wallet < 500 || !playerRef.current || insideHome) return;
@@ -884,7 +980,7 @@ function App() {
     sun.shadow.camera.top = 24; sun.shadow.camera.bottom = -24;
     scene.add(sun);
 
-    const { kiosk, colliders, trafficCars, rain } = buildWorld(scene);
+    const { kiosk, garage, colliders, trafficCars, rain } = buildWorld(scene);
   const interior = buildStarterInterior(scene);
   interiorRef.current = interior;
   homeTargetsRef.current = [];
@@ -924,6 +1020,14 @@ function App() {
     player.position.set(0, 0, 12);
     scene.add(player);
     playerRef.current = player;
+    vehicleGroupsRef.current = {};
+    vehicleCatalog.forEach((vehicle, index) => {
+      const model = makeVehicleModel(vehicle.color);
+      model.position.set(-21 + index * 3, 0, 15.2);
+      model.visible = false;
+      scene.add(model);
+      vehicleGroupsRef.current[vehicle.id] = model;
+    });
     // Distinct stylized residents: original Nigerian street characters with varied faces, hair and outfits.
     const residentStarts: Array<[number, number]> = [
       [-8, 8.2], [-4, 10.4], [0, 8.2], [4, 10.4], [8, 8.2],
@@ -1125,7 +1229,7 @@ function App() {
         const thirstFactor = currentNeeds.thirst < 15 ? 0.72 : currentNeeds.thirst < 30 ? 0.88 : 1;
         const mood = (currentNeeds.hunger + currentNeeds.thirst + currentNeeds.energy + currentNeeds.fun + currentNeeds.social + currentNeeds.hygiene + currentNeeds.bladder) / 7;
         const moodFactor = mood < 20 ? 0.78 : mood < 40 ? 0.9 : 1;
-        const movementSpeed = (autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor * moodFactor;
+        const movementSpeed = (vehicleDrivingRef.current ? 10.5 : autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor * moodFactor;
         const stepX = direction.x * delta * movementSpeed;
         const stepZ = direction.z * delta * movementSpeed;
         const canStandAt = (x: number, z: number) => isInsideRef.current
@@ -1134,6 +1238,14 @@ function App() {
         if (canStandAt(player.position.x + stepX, player.position.z)) player.position.x += stepX;
         if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
         player.rotation.y = Math.atan2(direction.x, direction.z);
+      }
+      const activeVehicle = selectedVehicleRef.current ? vehicleGroupsRef.current[selectedVehicleRef.current] : null;
+      if (activeVehicle && vehicleDrivingRef.current) {
+        activeVehicle.position.copy(player.position);
+        activeVehicle.position.y = 0;
+        activeVehicle.rotation.y = player.rotation.y;
+        const wheels = activeVehicle.userData.wheels as THREE.Mesh[] | undefined;
+        wheels?.forEach((wheel) => { wheel.rotation.z += delta * 8; });
       }
       const homePose = homeActivityRef.current;
       if (homePose === 'dance') { player.position.y = 0.08 + Math.abs(Math.sin(elapsed * 8)) * 0.16; player.rotation.z = Math.sin(elapsed * 8) * 0.12; player.rotation.x = Math.cos(elapsed * 8) * 0.05; }
@@ -1174,6 +1286,9 @@ function App() {
         const campus = !isInsideRef.current ? campusPoints.find(({x,z})=>Math.hypot(player.position.x-x,player.position.z-z)<9)?.name ?? '' : '';
         const nearJob = !isInsideRef.current && Math.hypot(player.position.x + 7.5, player.position.z + 4.2) < 4.2;
         const nearHome = isInsideRef.current || Math.hypot(player.position.x, player.position.z + 1.7) < 2.8;
+        const nearGarage = !isInsideRef.current && Math.hypot(player.position.x - garage.x, player.position.z - garage.z) < 7.5;
+        const activeParkedVehicle = selectedVehicleRef.current ? vehicleGroupsRef.current[selectedVehicleRef.current] : null;
+        const nearOwnedVehicle = !isInsideRef.current && !vehicleDrivingRef.current && Boolean(activeParkedVehicle?.visible) && Math.hypot(player.position.x - (activeParkedVehicle?.position.x ?? 999), player.position.z - (activeParkedVehicle?.position.z ?? 999)) < 4.8;
         let closest: { profile: ResidentProfile; distance: number } | null = null;
         if (!isInsideRef.current) {
           for (const resident of pedestrians) {
@@ -1184,7 +1299,7 @@ function App() {
           }
         }
         setNearbyResident(closest?.profile ?? null);
-        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome, nearJob, nearMarket: marketIndex, nearCampus: campus }));
+        setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome, nearJob, nearMarket: marketIndex, nearCampus: campus, nearGarage, nearOwnedVehicle }));
       }
       if (elapsed - lastNeedsTick >= 5) {
         lastNeedsTick = elapsed;
@@ -1300,6 +1415,9 @@ function App() {
         {status.nearCampus && !campusOpen && <button className="campus-interact-prompt" onClick={()=>{setActiveCampus(status.nearCampus);setCampusOpen(true);}}>🎓 EXPLORE {status.nearCampus.toUpperCase()} <span>Enrol · Attend a class</span></button>}
         {nearbyResident && !talkingTo && !shopOpen && !homeOpen && !jobOpen && <button className="resident-interact-prompt" onClick={() => { setTalkingTo(nearbyResident); setDialogueLine(nearbyResident.greeting); }}>💬 TALK TO {nearbyResident.name.toUpperCase()} <span>{nearbyResident.role} · Tap to greet</span></button>}
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
+        {status.nearGarage && !garageOpen && !vehicleDriving && <button className="garage-interact-prompt" onClick={() => setGarageOpen(true)}>🚘 OPEN GARAGE <span>Buy · Select · Upgrade vehicles</span></button>}
+        {status.nearOwnedVehicle && !vehicleDriving && !garageOpen && <button className="vehicle-enter-prompt" onClick={enterOwnedVehicle}>🚗 ENTER YOUR CAR <span>Tap to get behind the wheel</span></button>}
+        {vehicleDriving && <div className="vehicle-drive-actions"><span>🚘 DRIVING MODE</span>{status.nearGarage && <button onClick={parkOwnedVehicle}>PARK IN GARAGE</button>}<button onClick={exitOwnedVehicle}>EXIT VEHICLE</button></div>}
         {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); homeActivityRef.current=''; setHomeActivity(''); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
         {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="buy-mode-launch" onClick={() => { setBuyModeOpen(true); setHomeOpen(false); setSelectedHomeObject(null); }}>🛋️ BUY MODE</button><button className="interior-exit" disabled={Boolean(homeTask)} onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); homeActivityRef.current=''; setHomeActivity(''); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
         {wardrobeOpen && <div className="shop-backdrop" role="presentation"><section className="wardrobe-panel" role="dialog" aria-modal="true" aria-label="Character wardrobe">
@@ -1354,9 +1472,10 @@ function App() {
           <section className="life-section"><h3>🏦 Banking & savings</h3><p>Move money between your wallet and personal savings.</p><div className="life-actions"><button onClick={()=>depositMoney(1000)} disabled={wallet<1000}>Deposit ₦1,000</button><button onClick={()=>withdrawMoney(1000)} disabled={bankSavings<1000}>Withdraw ₦1,000</button><button onClick={()=>depositMoney(5000)} disabled={wallet<5000}>Deposit ₦5,000</button><button onClick={()=>withdrawMoney(5000)} disabled={bankSavings<5000}>Withdraw ₦5,000</button></div></section>
           <section className="life-section"><h3>🏠 Property & home</h3><p>{propertyLevel===0?'You currently live in your starter apartment.':propertyLevel===1?'You have upgraded to a more comfortable rented home.':'You own your home!'}</p><button className="life-action" disabled={propertyLevel>=2||wallet<(propertyLevel===0?35000:65000)} onClick={buyPropertyUpgrade}>{propertyLevel===0?'UPGRADE HOME · ₦35,000':propertyLevel===1?'BUY YOUR HOME · ₦65,000':'PROPERTY OWNED ✓'}</button></section>
           <section className="life-section"><h3>🤝 Friendships</h3><p>Keep in touch with people around Ado-Ekiti. Build trust through conversations and time together.</p><div className="life-friends">{Object.entries(relationshipScores).map(([person,score])=><div key={person}><span>{person}</span><b>{score}%</b><div className="life-progress"><i style={{width:`${score}%`}} /></div><button onClick={()=>buildRelationship(person,20)}>Spend time +20</button></div>)}</div></section>
-          <section className="life-section"><h3>🚕 Transport</h3><p>{vehicleOwned?'You own a personal car.':'No personal vehicle yet. Taxis are available around the city.'}</p><div className="life-actions"><button onClick={takeTaxi} disabled={wallet<500||insideHome}>Take taxi · ₦500</button><button onClick={buyVehicle} disabled={vehicleOwned||wallet<80000}>{vehicleOwned?'Car owned ✓':'Buy car · ₦80,000'}</button></div></section>
+          <section className="life-section"><h3>🚘 Garage & transport</h3><p>{ownedVehicles.length ? `${ownedVehicles.length} vehicle${ownedVehicles.length===1?'':'s'} owned. Visit your garage to select, upgrade or drive.` : 'No personal vehicle yet. Build your savings and visit the garage to shop.'}</p><div className="life-actions"><button onClick={takeTaxi} disabled={wallet<500||insideHome}>Take taxi · ₦500</button><button onClick={() => setGarageOpen(true)}>OPEN GARAGE</button></div></section>
           <section className="life-section"><h3>🎓 Education</h3><p>{enrolledCampus? `Enrolled at ${enrolledCampus} · ${studentCourse}`:'Visit UNAD or Ado Poly and enrol in a course.'}</p><p>Study credits: <b>{studyCredits}/5</b> · Exam: <b>{examPassed?'Passed':'Not yet passed'}</b> · Graduation: <b>{graduated?'Completed':'In progress'}</b></p>{enrolledCampus&&<button className="life-action" disabled={!examPassed||graduated} onClick={()=>{setGraduated(true);setStatus(v=>({...v,message:`Congratulations! You graduated in ${studentCourse} from ${enrolledCampus}.`}));}}>GRADUATE {examPassed?'🎓':'· PASS EXAM FIRST'}</button>}</section>
         </section></div>}
+        {garageOpen && <div className="shop-backdrop" role="presentation"><section className="garage-panel" role="dialog" aria-modal="true" aria-label="Garage and vehicle dealership"><div className="shop-heading"><div><small>ADO-EKITI · YOUR MOTORING LIFE</small><h2>Garage & Dealership</h2><p>Buy your ride, manage your collection and tune your vehicle.</p></div><button className="shop-close" onClick={() => setGarageOpen(false)} aria-label="Close garage">×</button></div><div className="garage-wallet"><span>AVAILABLE CASH</span><b>₦{wallet.toLocaleString('en-NG')}</b><small>Vehicles and upgrades are paid from your wallet.</small></div><div className="garage-section-title"><b>YOUR VEHICLES</b><span>{ownedVehicles.length} OWNED</span></div>{ownedVehicles.length ? <div className="garage-owned-list">{ownedVehicles.map((vehicle) => <article className={`garage-vehicle-card ${selectedVehicleId===vehicle.modelId?'selected':''}`} key={vehicle.id}><div className="garage-car-art" style={{'--car-color':vehicle.color} as React.CSSProperties}>🚘</div><div className="garage-vehicle-info"><b>{vehicle.name}</b><small>{vehicleCatalog.find((item)=>item.id===vehicle.modelId)?.type} · Engine {vehicle.upgrades.engine}/3 · Handling {vehicle.upgrades.handling}/3 · Tyres {vehicle.upgrades.tyres}/3</small><div className="garage-vehicle-actions"><button className={selectedVehicleId===vehicle.modelId?'selected':''} onClick={()=>setSelectedVehicleId(vehicle.modelId)}>{selectedVehicleId===vehicle.modelId?'SELECTED':'SELECT'}</button><button disabled={vehicleDriving || selectedVehicleId!==vehicle.modelId} onClick={enterOwnedVehicle}>DRIVE</button></div></div></article>)}</div> : <div className="garage-empty"><span>🚗</span><b>Your garage is waiting for its first car.</b><small>Choose a vehicle below when you have enough cash.</small></div>}<div className="garage-section-title"><b>VEHICLE DEALERSHIP</b><span>3 MODELS</span></div><div className="garage-catalog">{vehicleCatalog.map((model)=>{const owned=ownedVehicles.some((vehicle)=>vehicle.modelId===model.id);return <article className="garage-model-card" key={model.id}><div className="garage-model-art" style={{'--car-color':model.color} as React.CSSProperties}>{model.emoji}</div><div><small>{model.type.toUpperCase()}</small><b>{model.name}</b><p>{model.detail}</p><strong>₦{model.price.toLocaleString('en-NG')}</strong><button disabled={owned || wallet<model.price} onClick={()=>buyGarageVehicle(model.id)}>{owned?'OWNED ✓':wallet>=model.price?'BUY VEHICLE':'NOT ENOUGH CASH'}</button></div></article>;})}</div>{selectedVehicleId && ownedVehicles.some((vehicle)=>vehicle.modelId===selectedVehicleId) && <div className="garage-upgrades"><div className="garage-section-title"><b>WORKSHOP UPGRADES</b><span>SELECTED VEHICLE</span></div>{([{key:'engine',label:'Engine tuning',detail:'Increase driving speed',base:24000},{key:'handling',label:'Handling kit',detail:'Improve cornering response',base:18000},{key:'tyres',label:'Road tyres',detail:'Upgrade your road grip',base:14000}] as const).map((item)=>{const vehicle=ownedVehicles.find((v)=>v.modelId===selectedVehicleId)!;const level=vehicle.upgrades[item.key];const cost=item.base*(level+1);return <div className="garage-upgrade-row" key={item.key}><div><b>{item.label}</b><small>{item.detail} · Level {level}/3</small></div><button disabled={level>=3||wallet<cost} onClick={()=>upgradeOwnedVehicle(item.key)}>{level>=3?'MAX LEVEL':`UPGRADE · ₦${cost.toLocaleString('en-NG')}`}</button></div>;})}</div>}<div className="garage-footer"><small>Vehicle ownership and upgrades save on this device.</small><button onClick={()=>setGarageOpen(false)}>DONE</button></div></section></div>}
                  {homeTask && <div className="home-task-toast" role="status"><div className="home-task-copy"><small>HOME ACTIVITY IN PROGRESS</small><b>{homeTask.label}</b><span>{Math.max(0, Math.ceil((homeTask.endsAt - Date.now()) / 1000))} seconds remaining</span></div><div className="home-task-track"><i style={{ width: `${homeTask.progress}%` }} /></div><button onClick={cancelHomeActivity}>CANCEL</button></div>}
                  {selectedHomeObject && insideHome && <div className="shop-backdrop" role="presentation"><section className="home-object-panel" role="dialog" aria-modal="true" aria-label={selectedHomeObject.name}><div className="shop-heading"><div><small>{selectedHomeObject.room.toUpperCase()} · HOME INTERACTION</small><h2>{selectedHomeObject.emoji} {selectedHomeObject.name}</h2><p>{selectedHomeObject.description}</p></div><button className="shop-close" onClick={() => setSelectedHomeObject(null)} aria-label="Close furniture actions">×</button></div><div className="home-object-actions">{selectedHomeObject.actions.map((item) => <button key={item.action} onClick={() => performFurnitureAction(item.action)}><span>▶</span><div><b>{item.label}</b><small>{item.detail}</small><small className="home-object-duration">{item.duration} · No charge</small></div></button>)}</div><div className="home-object-skills"><b>HOME PROGRESS · SAVED ON THIS DEVICE</b><span>Completed {homeProgress.completedActivities}</span><span>Hustle {homeSkills.hustle}</span><span>Charisma {homeSkills.charisma}</span><span>Last: {homeProgress.lastActivity || 'No activity yet'}</span></div></section></div>}
 {buyModeOpen && insideHome && <div className="shop-backdrop" role="presentation"><section className="buy-mode-panel" role="dialog" aria-modal="true" aria-label="Home buy mode"><div className="shop-heading"><div><small>PHASE 6 · DESIGN YOUR SPACE</small><h2>🛋️ Buy Mode</h2><p>Buy new pieces, then select them in the room to adjust their position.</p></div><button className="shop-close" onClick={() => { setBuyModeOpen(false); setSelectedPlacedId(null); }} aria-label="Close Buy Mode">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString('en-NG')}</strong></div>{selectedPlacedId && <div className="buy-selected"><b>{placedFurniture.find((item) => item.id === selectedPlacedId)?.emoji} {placedFurniture.find((item) => item.id === selectedPlacedId)?.name}</b><div className="buy-controls"><button onClick={() => updateSelectedFurniture({ x: Math.max(-5.8, (placedFurniture.find((item) => item.id === selectedPlacedId)?.x ?? 0) - 0.5) })}>← Move</button><button onClick={() => updateSelectedFurniture({ x: Math.min(5.8, (placedFurniture.find((item) => item.id === selectedPlacedId)?.x ?? 0) + 0.5) })}>Move →</button><button onClick={() => updateSelectedFurniture({ z: Math.max(-2.2, (placedFurniture.find((item) => item.id === selectedPlacedId)?.z ?? 0) - 0.5) })}>↑ Move</button><button onClick={() => updateSelectedFurniture({ z: Math.min(8.0, (placedFurniture.find((item) => item.id === selectedPlacedId)?.z ?? 0) + 0.5) })}>Move ↓</button><button onClick={() => updateSelectedFurniture({ rotation: (placedFurniture.find((item) => item.id === selectedPlacedId)?.rotation ?? 0) + Math.PI / 4 })}>↻ Rotate</button></div><div className="buy-controls"><button onClick={storeSelectedFurniture}>📦 Store</button><button className="buy-sell" onClick={sellSelectedFurniture}>Sell · 60% refund</button></div></div>}<div className="buy-mode-section"><b>FURNITURE CATALOGUE</b><div className="buy-catalog">{furnitureCatalog.map((item) => <article className="buy-catalog-item" key={item.id}><span>{item.emoji}</span><div><b>{item.name}</b><small>{item.detail}</small><strong>₦{item.price.toLocaleString('en-NG')}</strong></div><button disabled={wallet < item.price} onClick={() => placeFurniture(item.id)}>BUY</button></article>)}</div></div><div className="buy-mode-section"><b>YOUR STORAGE · {storedFurniture.length} ITEMS</b>{storedFurniture.length ? <div className="buy-storage">{storedFurniture.map((id, index) => { const item = furnitureCatalog.find((entry) => entry.id === id); return item ? <button key={`${id}-${index}`} onClick={() => placeFurniture(id, true)}>{item.emoji} {item.name} · PLACE</button> : null; })}</div> : <p className="buy-empty">Store furniture here to place it again later.</p>}</div><div className="buy-mode-section"><b>ROOM FINISHES</b><div className="buy-design"><label>Floor colour<div>{['#b98f67','#9b8068','#b6a58c','#786b60','#d0b88e'].map((color) => <button key={color} aria-label={`Floor colour ${color}`} className={roomDesign.floor===color?'chosen':''} style={{background:color}} onClick={() => setRoomDesign((v) => ({ ...v, floor: color }))}/>)}</div></label><label>Wall colour<div>{['#e8ddc8','#f1e8d7','#d9c6ad','#d8e0d2','#d7d9e8','#c9a9a0'].map((color) => <button key={color} aria-label={`Wall colour ${color}`} className={roomDesign.wall===color?'chosen':''} style={{background:color}} onClick={() => setRoomDesign((v) => ({ ...v, wall: color }))}/>)}</div></label></div></div><p className="buy-mode-note">Furniture, storage and room finishes save on this device. Tap a placed item in the room to select it.</p></section></div>}
