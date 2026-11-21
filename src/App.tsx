@@ -37,14 +37,15 @@ function addTree(scene: THREE.Scene, x: number, z: number) {
 
 function buildStarterInterior(scene: THREE.Scene) {
   const room = new THREE.Group();
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.18, 6.4), makeMaterial('#b98f67'));
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(14.4, 0.18, 12.4), makeMaterial('#b98f67'));
   floor.position.set(0, 0.02, 2.8); floor.receiveShadow = true; room.add(floor);
   const wall = (x: number, z: number, w: number, d: number, color = '#e8ddc8') => {
     const part = new THREE.Mesh(new THREE.BoxGeometry(w, 2.8, d), makeMaterial(color));
     part.position.set(x, 1.4, z); part.castShadow = true; part.receiveShadow = true; room.add(part);
   };
-  wall(-4.2, 2.8, 0.18, 6.4); wall(4.2, 2.8, 0.18, 6.4); wall(0, 6, 8.4, 0.18);
-  wall(-2.55, -0.4, 3.3, 0.18); wall(2.55, -0.4, 3.3, 0.18);
+  wall(-7.2, 2.8, 0.18, 12.4); wall(7.2, 2.8, 0.18, 12.4); wall(0, 9, 14.4, 0.18);
+  wall(-4.7, -3.4, 5.0, 0.18); wall(4.7, -3.4, 5.0, 0.18);
+  wall(-1.0, 5.9, 0.16, 5.8, '#d8c7ad'); wall(4.9, 5.9, 0.16, 5.8, '#d8c7ad'); wall(1.95, 3.05, 5.9, 0.16, '#d8c7ad');
   const addFurniture = (x: number, y: number, z: number, w: number, h: number, d: number, color: string) => {
     const item = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), makeMaterial(color));
     item.position.set(x, y + h / 2, z); item.castShadow = true; item.receiveShadow = true; room.add(item);
@@ -68,7 +69,11 @@ function buildStarterInterior(scene: THREE.Scene) {
   bulb.position.set(0, 2.55, 2.8); room.add(bulb);
   const light = new THREE.PointLight('#ffe1b0', 1.15, 13); light.position.set(0, 2.35, 2.8); room.add(light);
   const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.9, 0.08), new THREE.MeshStandardMaterial({ color: '#8fc4d0', roughness: 0.25 }));
-  windowGlass.position.set(-4.08, 1.65, 3.0); room.add(windowGlass);
+  windowGlass.position.set(-7.08, 1.65, 3.0); room.add(windowGlass);
+  addFurniture(5.9, 0.12, 7.3, 1.45, 0.12, 1.35, '#9ccbd0');
+  addFurniture(5.95, 0.12, 5.0, 0.72, 0.82, 0.55, '#f1eee4');
+  addFurniture(5.95, 0.12, 6.0, 0.58, 0.35, 0.5, '#e8e5dc');
+  addFurniture(2.9, 0.12, 7.6, 1.15, 0.82, 0.55, '#d9dedb');
   scene.add(room); room.visible = false; return room;
 }
 
@@ -227,8 +232,8 @@ function buildWorld(scene: THREE.Scene) {
   addBox(scene, -29.6, 0.025, -29, 1.2, 0.05, 38, '#c9b995');
 
   // Starter home, porch and yard.
-  addBox(scene, 0, 0, 2.8, 9, 3.4, 7, '#e8d7b6'); block(0, 2.8, 9.5, 7.5);
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(6.7, 2.6, 4), makeMaterial('#a9573e'));
+  addBox(scene, 0, 0, 2.8, 15, 3.4, 13, '#e8d7b6'); block(0, 2.8, 15.5, 13.5);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(9.2, 2.6, 4), makeMaterial('#a9573e'));
   roof.rotation.y = Math.PI / 4; roof.scale.z = 0.82; roof.position.set(0, 4.55, 2.8); roof.castShadow = true; scene.add(roof);
   addBox(scene, 0, 0, -1.05, 3.2, 0.18, 1.25, '#b78b62');
   addBox(scene, 0, 0.18, -1.45, 0.9, 1.8, 0.12, '#70472f');
@@ -236,9 +241,9 @@ function buildWorld(scene: THREE.Scene) {
   addBox(scene, 2.65, 1.35, -0.76, 1.25, 0.9, 0.12, '#8fc4d0');
 
   // Low compound wall with a wide, deliberate entrance.
-  addBox(scene, -4.9, 0, 7.1, 6.2, 0.75, 0.12, '#d9c39b');
-  addBox(scene, 4.9, 0, 7.1, 6.2, 0.75, 0.12, '#d9c39b');
-  for (let x = -8; x <= 8; x += 1.5) {
+  addBox(scene, -8.0, 0, 9.4, 6.2, 0.75, 0.12, '#d9c39b');
+  addBox(scene, 8.0, 0, 9.4, 6.2, 0.75, 0.12, '#d9c39b');
+  for (let x = -11; x <= 11; x += 1.5) {
     if (Math.abs(x) < 1.4) continue;
     addBox(scene, x, 0, 7.1, 0.12, 0.9, 0.12, '#e6d5b4');
     block(x, 7.1, 0.35, 0.35);
@@ -275,6 +280,12 @@ function buildWorld(scene: THREE.Scene) {
   const treeSpots = [[-18,-3],[18,-3],[-40,-13],[-35,-8],[-13,-17],[14,-17],[39,-14],[-40,-34],[-13,-37],[13,-36],[39,-34],[-18,12],[19,12],[-8,17],[9,17]] as number[][];
   for (const [x, z] of treeSpots) { addTree(scene, x, z); block(x, z, 1.8, 1.8); }
 
+  // Three full-size market compounds in one walkable commercial district.
+  const market=(x:number,z:number,accent:string)=>{addBox(scene,x,0,z,8.5,2.8,7.2,'#c9a47b');addBox(scene,x,2.85,z,9.2,0.22,7.8,accent);addBox(scene,x,1.5,z-3.68,8.6,0.42,0.12,'#f0d9a5');for(let i=-3;i<=3;i+=2){addBox(scene,x+i,0.65,z-3.82,1.45,1.15,0.12,'#9a6544');addBox(scene,x+i,1.45,z-3.8,1.5,0.12,0.12,'#f3dfad');}for(let i=-2;i<=2;i+=2){addBox(scene,x+i,0.6,z+1,1.5,1.1,1.2,'#a8754b');addBox(scene,x+i,1.2,z+1,1.45,0.12,1.15,'#d6b16d');}};
+  market(12,-43,'#b65d42'); market(22,-43,'#397c70'); market(32,-43,'#a77b42');
+  // Campus compounds for UNAD and Ado Polytechnic.
+  const campus=(x:number,z:number,wall:string)=>{addBox(scene,x,0,z,13,2.4,9,wall);addBox(scene,x,2.5,z,13.6,0.2,9.5,'#a9573e');block(x-3,z,4.3,5.8);block(x+3,z,4.3,5.8);addBox(scene,x,1.2,z-4.8,5.8,2.1,0.35,'#e9d9bd');addBox(scene,x,2.35,z-4.85,6,0.28,0.45,'#d6a85e');addBox(scene,x-3,0,z,4.3,3.1,5.8,'#d6d0bd');addBox(scene,x+3,0,z,4.3,3.1,5.8,'#c4c9bd');};
+  campus(-34,-30,'#d5c49f'); campus(-13,-39,'#c9b99a');
   // Streetlights and simple roadside planting add scale without heavy assets.
   for (const [x,z] of [[-18,-10],[18,-10],[-25,-18],[-25,-37]] as number[][]) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.1,4,6), makeMaterial('#46534a'));
@@ -299,6 +310,13 @@ function App() {
   const [shopOpen, setShopOpen] = useState(false);
   const [homeOpen, setHomeOpen] = useState(false);
   const [insideHome, setInsideHome] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [autoTravel, setAutoTravel] = useState(false);
+  const [homeActivity, setHomeActivity] = useState('');
+  const autoDestinationRef = useRef<{x:number;z:number}|null>(null);
+  const autoPathRef = useRef<Array<[number,number]>>([]);
+  const autoPathIndexRef = useRef(0);
+  const homeActivityRef = useRef('');
   const [nearbyResident, setNearbyResident] = useState<ResidentProfile | null>(null);
   const [talkingTo, setTalkingTo] = useState<ResidentProfile | null>(null);
   const [dialogueLine, setDialogueLine] = useState('');
@@ -328,8 +346,12 @@ function App() {
   }, [jobWorking]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const shopItems = [{ id: 'water', name: 'Cold sachet water', detail: 'A quick refreshment', price: 100, emoji: '💧' }, { id: 'snack', name: 'Local snacks', detail: 'A small street-side bite', price: 350, emoji: '🥟' }, { id: 'softdrink', name: 'Soft drink', detail: 'Chilled bottle', price: 500, emoji: '🥤' }, { id: 'fruit', name: 'Fresh fruit', detail: 'Seasonal fruit portion', price: 250, emoji: '🍊' }];
-  const performHomeAction = (action: 'sleep' | 'shower' | 'cook') => {
-    if (action === 'sleep') {
+  const performHomeAction = (action: 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie') => {
+    homeActivityRef.current=action; setHomeActivity(action);
+    if(action==='sit'){setStatus((s)=>({...s,message:'You sat down to relax.'}));}
+    else if(action==='dance'){setNeeds((n)=>({...n,energy:Math.max(0,n.energy-5)}));setStatus((s)=>({...s,message:'Music is playing — you are dancing in your living room!'}));}
+    else if(action==='movie'){setStatus((s)=>({...s,message:'Movie night! You are watching a film from the sofa.'}));}
+    else if (action === 'sleep') {
       setNeeds((n) => ({ ...n, energy: 100, hunger: Math.max(0, n.hunger - 12), thirst: Math.max(0, n.thirst - 12) }));
       setStatus((s) => ({ ...s, message: 'You had a good rest. Energy restored!' }));
     } else if (action === 'shower') {
@@ -575,8 +597,11 @@ function App() {
       });
       // Translate movement into the camera's horizontal facing direction.
       // This keeps joystick-forward moving toward the centre of the view after the player rotates the camera.
-      const localX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + moveRef.current.x;
-      const localZ = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + moveRef.current.z;
+      const manualX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + moveRef.current.x;
+      const manualZ = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + moveRef.current.z;
+      if(Math.abs(manualX)+Math.abs(manualZ)>0.08 && autoDestinationRef.current){autoDestinationRef.current=null;autoPathRef.current=[];setAutoTravel(false);}
+      let localX=manualX,localZ=manualZ;
+      if(autoDestinationRef.current&&!isInsideRef.current){const blocked=(x:number,z:number)=>colliders.some((o)=>Math.abs(x-o.x)<o.halfX+0.48&&Math.abs(z-o.z)<o.halfZ+0.48);if(!autoPathRef.current.length){autoPathRef.current=findResidentPath(player.position.x,player.position.z,autoDestinationRef.current.x,autoDestinationRef.current.z,blocked);autoPathIndexRef.current=0;}const path=autoPathRef.current;while(autoPathIndexRef.current<path.length&&Math.hypot(path[autoPathIndexRef.current][0]-player.position.x,path[autoPathIndexRef.current][1]-player.position.z)<0.7)autoPathIndexRef.current++;const waypoint=path[autoPathIndexRef.current];if(waypoint){localX=waypoint[0]-player.position.x;localZ=waypoint[1]-player.position.z;}else{autoDestinationRef.current=null;autoPathRef.current=[];setAutoTravel(false);setStatus((v)=>({...v,message:'You have arrived at your destination.'}));}}
       const yaw = cameraLookRef.current.yaw;
       const inputX = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
       const inputZ = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
@@ -587,21 +612,22 @@ function App() {
         const energyFactor = currentNeeds.energy < 15 ? 0.62 : currentNeeds.energy < 35 ? 0.82 : 1;
         const hungerFactor = currentNeeds.hunger < 15 ? 0.82 : 1;
         const thirstFactor = currentNeeds.thirst < 15 ? 0.72 : currentNeeds.thirst < 30 ? 0.88 : 1;
-        const movementSpeed = 5.2 * energyFactor * hungerFactor * thirstFactor;
+        const movementSpeed = (autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor;
         const stepX = direction.x * delta * movementSpeed;
         const stepZ = direction.z * delta * movementSpeed;
         const canStandAt = (x: number, z: number) => isInsideRef.current
-          ? x >= -3.65 && x <= 3.65 && z >= 0.05 && z <= 5.45
+          ? x >= -6.65 && x <= 6.65 && z >= -2.9 && z <= 8.35
           : x >= -45 && x <= 45 && z >= -48 && z <= 22 && !colliders.some((obstacle) => Math.abs(x - obstacle.x) < obstacle.halfX + 0.42 && Math.abs(z - obstacle.z) < obstacle.halfZ + 0.42);
         if (canStandAt(player.position.x + stepX, player.position.z)) player.position.x += stepX;
         if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
         player.rotation.y = Math.atan2(direction.x, direction.z);
       }
+      if(homeActivityRef.current==='dance'){player.position.y=0.08+Math.abs(Math.sin(elapsed*8))*0.16;player.rotation.z=Math.sin(elapsed*8)*0.12;}else if(homeActivityRef.current==='sit'||homeActivityRef.current==='movie'){player.position.y=-0.18;player.rotation.z=0;}else{player.position.y=0;player.rotation.z=0;}
       target.set(player.position.x, 1.2, player.position.z);
       const look = cameraLookRef.current;
-      const orbitDistance = isInsideRef.current ? 6 : 10;
+      const orbitDistance = isInsideRef.current ? 8 : 10;
       const desiredCamera = isInsideRef.current
-        ? new THREE.Vector3(player.position.x + Math.sin(look.yaw) * 5.5, player.position.y + 7.2, player.position.z + Math.cos(look.yaw) * 5.5)
+        ? new THREE.Vector3(player.position.x + Math.sin(look.yaw) * 7.2, player.position.y + 8.4, player.position.z + Math.cos(look.yaw) * 7.2)
         : new THREE.Vector3(
             player.position.x + Math.sin(look.yaw) * Math.cos(look.pitch) * orbitDistance,
             player.position.y + 1.2 + Math.sin(look.pitch) * orbitDistance,
@@ -720,19 +746,19 @@ function App() {
       </header>
       <section className="game-stage">
         <div className="world" ref={hostRef} aria-label="3D Ekiti Lifestyle world" />
-        <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div>
+        <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div><button className="city-map-toggle" onClick={()=>setMapOpen(true)}>🗺️ CITY MAP</button>
         <div className="player-card"><div className="player-avatar">👤</div><div><b>Dami</b><small>New resident</small></div><span className="cash">₦{wallet.toLocaleString("en-NG")}</span></div>
         <div className="world-tip">{status.message}</div>
         <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
         {nearbyResident && !talkingTo && !shopOpen && !homeOpen && !jobOpen && <button className="resident-interact-prompt" onClick={() => { setTalkingTo(nearbyResident); setDialogueLine(nearbyResident.greeting); }}>💬 TALK TO {nearbyResident.name.toUpperCase()} <span>{nearbyResident.role} · Tap to greet</span></button>}
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
-        {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
-        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
-        {talkingTo && <div className="shop-backdrop" role="presentation"><section className="resident-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${talkingTo.name}`}><div className="shop-heading"><div><small>ADO-EKITI · NEIGHBOURHOOD</small><h2>{talkingTo.name}</h2><p>{talkingTo.age} years old · {talkingTo.role}</p></div><button className="shop-close" onClick={() => setTalkingTo(null)} aria-label="End conversation">×</button></div><div className="resident-dialogue"><span>💬</span><p>{dialogueLine}</p></div><div className="resident-topics"><button onClick={() => setDialogueLine(talkingTo.day)}>How is your day going?</button><button onClick={() => setDialogueLine(talkingTo.localTip)}>Tell me about this neighbourhood</button></div><button className="start-shift resident-goodbye" onClick={() => { setTalkingTo(null); setStatus((s) => ({ ...s, message: `You said goodbye to ${talkingTo.name}.` })); }}>NICE TALKING TO YOU</button></section></div>}
+        {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); homeActivityRef.current=''; setHomeActivity(''); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
+        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); homeActivityRef.current=''; setHomeActivity(''); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
+        {mapOpen && <div className="shop-backdrop" role="presentation"><section className="city-map-panel" role="dialog" aria-modal="true" aria-label="Ado-Ekiti city map"><div className="shop-heading"><div><small>EKITI LIFESTYLE · CITY NAVIGATION</small><h2>Ado-Ekiti Map</h2><p>Tap the map or a destination to walk there automatically.</p></div><button className="shop-close" onClick={()=>setMapOpen(false)}>×</button></div><div className="city-map-canvas" onClick={(e)=>{const r=e.currentTarget.getBoundingClientRect();autoDestinationRef.current={x:-45+(e.clientX-r.left)/r.width*90,z:22-(e.clientY-r.top)/r.height*70};autoPathRef.current=[];autoPathIndexRef.current=0;setAutoTravel(true);setMapOpen(false);setStatus((v)=>({...v,message:'Destination selected. Walking there automatically.'}));}}><span className="map-label map-markets">THREE MARKETS</span><span className="map-label map-unad">UNAD</span><span className="map-label map-poly">ADO POLY</span><span className="map-you" style={{left:(((status.x+45)/90)*100)+'%',top:(((22-status.z)/70)*100)+'%'}}>YOU</span></div><div className="map-shortcuts"><button onClick={()=>{autoDestinationRef.current={x:12,z:-43};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ Oja Oba Market</button><button onClick={()=>{autoDestinationRef.current={x:22,z:-43};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ Bisi Market</button><button onClick={()=>{autoDestinationRef.current={x:32,z:-43};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🛍️ New Garage Market</button><button onClick={()=>{autoDestinationRef.current={x:-34,z:-30};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🎓 UNAD</button><button onClick={()=>{autoDestinationRef.current={x:-13,z:-39};autoPathRef.current=[];setAutoTravel(true);setMapOpen(false);}}>🎓 Ado Poly</button></div><button className="start-shift" onClick={()=>{autoDestinationRef.current=null;autoPathRef.current=[];setAutoTravel(false);setMapOpen(false);}}>CLOSE MAP / CANCEL ROUTE</button></section></div>}{autoTravel&&<div className="auto-travel-banner">🚶 WALKING TO DESTINATION · JOYSTICK CANCELS</div>}{talkingTo && <div className="shop-backdrop" role="presentation"><section className="resident-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${talkingTo.name}`}><div className="shop-heading"><div><small>ADO-EKITI · NEIGHBOURHOOD</small><h2>{talkingTo.name}</h2><p>{talkingTo.age} years old · {talkingTo.role}</p></div><button className="shop-close" onClick={() => setTalkingTo(null)} aria-label="End conversation">×</button></div><div className="resident-dialogue"><span>💬</span><p>{dialogueLine}</p></div><div className="resident-topics"><button onClick={() => setDialogueLine(talkingTo.day)}>How is your day going?</button><button onClick={() => setDialogueLine(talkingTo.localTip)}>Tell me about this neighbourhood</button></div><button className="start-shift resident-goodbye" onClick={() => { setTalkingTo(null); setStatus((s) => ({ ...s, message: `You said goodbye to ${talkingTo.name}.` })); }}>NICE TALKING TO YOU</button></section></div>}
         {jobOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label="Local job centre"><div className="shop-heading"><div><small>ADO-EKITI · COMMUNITY JOB BOARD</small><h2>Find a day's work</h2><p>Take a short neighbourhood delivery shift.</p></div><button className="shop-close" onClick={() => setJobOpen(false)} aria-label="Close jobs">×</button></div><div className="job-offer"><span>🛵</span><div><b>Neighbourhood Errand Assistant</b><small>Collect and deliver local orders around the area</small><strong>₦{jobPay.toLocaleString('en-NG')} per shift</strong></div></div><div className="job-requirements"><b>SHIFT DETAILS</b><span>Duration: 30 seconds (prototype)</span><span>Energy and hydration are used while working</span><span>Payment arrives when the shift is completed</span></div><button className="start-shift" onClick={() => { setJobOpen(false); setWorkSeconds(30); setJobWorking(true); setStatus((s) => ({ ...s, message: 'You started a delivery shift. Keep going!' })); }}>START SHIFT · EARN ₦{jobPay.toLocaleString('en-NG')}</button></section></div>}
         {jobWorking && <div className="working-banner"><span>🛵 ON DELIVERY SHIFT</span><b>{workSeconds}s remaining</b><small>Keep exploring — your shift is underway.</small></div>}
-        {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Your bedroom, living area and kitchen are ready.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button></div><div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
+        {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Your bedroom, living area and kitchen are ready.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button><button onClick={()=>performHomeAction('sit')}><span>🛋️</span><b>Sit & relax</b><small>Use the sofa</small></button><button onClick={()=>performHomeAction('dance')}><span>💃</span><b>Dance</b><small>Move to music</small></button><button onClick={()=>performHomeAction('movie')}><span>📺</span><b>Watch movie</b><small>Movie night</small></button><button onClick={()=>{homeActivityRef.current='';setHomeActivity('');setStatus((s)=>({...s,message:'You stood up and are ready to move.'}));}}><span>🚶</span><b>Stand up</b><small>Return to movement</small></button></div>{homeActivity&&<div className="home-activity-status">CURRENT ACTIVITY: {homeActivity.toUpperCase()} · Choose Stand up to move again.</div>}<div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
         {shopOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label="Neighbourhood kiosk"><div className="shop-heading"><div><small>ADO-EKITI · STREET KIOSK</small><h2>Neighbourhood Store</h2><p>Pick up something for the road.</p></div><button className="shop-close" onClick={() => setShopOpen(false)} aria-label="Close shop">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString("en-NG")}</strong></div><div className="shop-items">{shopItems.map((item) => <article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id] || 0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString("en-NG")}</strong><button onClick={() => buyItem(item)} disabled={wallet < item.price}>BUY</button></div></article>)}</div><p className="shop-note">Prototype purchases update your demo wallet and bag for this session.</p></section></div> }
         <div className="touch-controls" aria-label="Virtual joystick movement control">
           <div

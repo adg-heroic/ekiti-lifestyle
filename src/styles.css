@@ -84,3 +84,19 @@ button{font:inherit}
 .resident-topics button:active{border-color:#d6a85e;background:#d6a85e20}
 .resident-goodbye{margin-top:14px}
 @media(max-width:700px){.resident-interact-prompt{top:32%;padding:11px 14px;font-size:10px}.resident-panel{padding:17px;border-radius:17px}.resident-dialogue{margin:17px 0 13px;padding:13px}.resident-dialogue p{font-size:12px}.resident-topics button{padding:11px;font-size:10px}}
+
+.city-map-toggle{position:absolute;right:18px;top:18px;z-index:7;border:1px solid #f1d08c88;border-radius:11px;padding:11px 15px;background:#17251eed;color:#f1d08c;font-size:10px;font-weight:900;cursor:pointer}
+.city-map-panel{width:min(590px,96vw);max-height:92%;overflow:auto;border:1px solid #ffffff2b;border-radius:20px;padding:20px;background:linear-gradient(160deg,#293e32,#14231d 75%);color:#f5f2e9}
+.city-map-canvas{position:relative;height:330px;border:1px solid #ffffff2b;border-radius:14px;background-color:#8eae7d;background-image:linear-gradient(30deg,#ffffff16 12%,transparent 12.5%,transparent 87%,#ffffff16 87.5%),linear-gradient(150deg,#ffffff16 12%,transparent 12.5%,transparent 87%,#ffffff16 87.5%);background-size:48px 48px;cursor:crosshair}
+.city-map-canvas:before,.city-map-canvas:after{content:'';position:absolute;background:#555d58;border:2px solid #e2d6ad}
+.city-map-canvas:before{height:13px;width:120%;left:-10%;top:48%;transform:rotate(-8deg)}
+.city-map-canvas:after{width:13px;height:120%;left:42%;top:-10%;transform:rotate(10deg)}
+.map-label{position:absolute;z-index:2;padding:8px;border-radius:8px;background:#294b37;color:white;font-size:10px;font-weight:900}
+.map-markets{right:8%;top:50%}.map-unad{left:8%;top:14%;background:#6b4c32}.map-poly{left:30%;top:22%;background:#6b4c32}
+.map-you{position:absolute;z-index:3;transform:translate(-50%,-50%);padding:5px 7px;border:2px solid white;border-radius:99px;background:#288d5b;color:white;font-size:8px;font-weight:900;pointer-events:none}
+.map-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.map-shortcuts button{padding:11px;border:1px solid #ffffff24;border-radius:9px;background:#ffffff0b;color:#f5f2e9;text-align:left;font-size:10px;cursor:pointer}
+.auto-travel-banner{position:absolute;left:50%;top:66px;transform:translateX(-50%);z-index:6;padding:10px 14px;border:1px solid #b9d6c0;border-radius:99px;background:#17251eed;color:#f1f5e9;font-size:9px;font-weight:900;white-space:nowrap}
+.home-activity-status{margin-top:12px;padding:10px;border-radius:9px;background:#d6a85e18;color:#f1d08c;font-size:9px;font-weight:800}
+.home-panel{width:min(560px,100%)}
+@media(max-width:700px){.city-map-toggle{top:10px;right:9px;padding:9px 11px;font-size:9px}.city-map-panel{padding:15px}.city-map-canvas{height:290px}.auto-travel-banner{top:102px;font-size:8px;padding:8px 10px}.map-shortcuts{grid-template-columns:1fr 1fr}}
