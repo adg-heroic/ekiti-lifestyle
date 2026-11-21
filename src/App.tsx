@@ -429,7 +429,6 @@ function App() {
         };
         const profile = resident.userData.profile as ResidentProfile;
         const progress = ((elapsed * speed + phase) % 2);
-        const travel = progress <= 1 ? progress : 2 - progress;
         const laneZ = profile.id % 2 === 0 ? 8.2 : 10.4;
         const playerDistance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
         const nearbyPerson = pedestrians.some((other) => other !== resident &&
