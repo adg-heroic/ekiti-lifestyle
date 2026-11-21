@@ -112,6 +112,8 @@ function buildWorld(scene: THREE.Scene) {
 function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const joystickRef = useRef<HTMLDivElement>(null);
+  const cameraDragRef = useRef({ pointerId: -1, x: 0, y: 0 });
+  const cameraLookRef = useRef({ yaw: 0, pitch: 0.62 });
   const moveRef = useRef<Move>({ x: 0, z: 0 });
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
   const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12 });
@@ -216,7 +218,13 @@ function App() {
         player.rotation.y = Math.atan2(direction.x, direction.z);
       }
       target.set(player.position.x, 1.2, player.position.z);
-      const desiredCamera = new THREE.Vector3(player.position.x, player.position.y + 7, player.position.z + 10);
+      const look = cameraLookRef.current;
+      const orbitDistance = 10;
+      const desiredCamera = new THREE.Vector3(
+        player.position.x + Math.sin(look.yaw) * Math.cos(look.pitch) * orbitDistance,
+        player.position.y + 1.2 + Math.sin(look.pitch) * orbitDistance,
+        player.position.z + Math.cos(look.yaw) * Math.cos(look.pitch) * orbitDistance
+      );
       cameraDirection.copy(desiredCamera).sub(target).normalize();
       cameraRay.set(target, cameraDirection);
       cameraRay.far = 10;
@@ -256,6 +264,28 @@ function App() {
       renderer.domElement.remove();
     };
   }, []);
+
+
+  const startCameraLook = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    cameraDragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+
+  const moveCameraLook = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (cameraDragRef.current.pointerId !== event.pointerId || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const dx = event.clientX - cameraDragRef.current.x;
+    const dy = event.clientY - cameraDragRef.current.y;
+    cameraDragRef.current.x = event.clientX;
+    cameraDragRef.current.y = event.clientY;
+    cameraLookRef.current.yaw -= dx * 0.008;
+    cameraLookRef.current.pitch = THREE.MathUtils.clamp(cameraLookRef.current.pitch + dy * 0.006, 0.18, 1.18);
+  };
+
+  const stopCameraLook = (event: React.PointerEvent<HTMLDivElement>) => {
+    cameraDragRef.current.pointerId = -1;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
 
   const updateJoystick = (event: React.PointerEvent<HTMLDivElement>) => {
     const base = joystickRef.current;
@@ -310,7 +340,15 @@ function App() {
             <span className="joystick-knob" style={{ transform: `translate(calc(-50% + ${joystickPosition.x}px), calc(-50% + ${joystickPosition.y}px))` }} />
           </div>
         </div>
-        <div className="control-hint">WASD / ARROW KEYS <span>•</span> JOYSTICK ON MOBILE</div>
+        <div
+          className="camera-look-area"
+          onPointerDown={startCameraLook}
+          onPointerMove={moveCameraLook}
+          onPointerUp={stopCameraLook}
+          onPointerCancel={stopCameraLook}
+          aria-label="Drag to rotate camera"
+        ><span className="camera-look-hint">DRAG TO LOOK</span></div>
+        <div className="control-hint">WASD / ARROW KEYS <span>•</span> JOYSTICK + LOOK ON MOBILE</div>
         <div className="coordinate">X {status.x} · Z {status.z}</div>
       </section>
       <footer className="bottom-bar"><span><i /> 3D WORLD PROTOTYPE</span><span>BUILD YOUR LIFE. OWN YOUR FUTURE. EXPLORE YOUR CITY.</span><span>v0.2.0</span></footer>
