@@ -33,6 +33,44 @@ function addTree(scene: THREE.Scene, x: number, z: number) {
   scene.add(highlight);
 }
 
+
+function buildStarterInterior(scene: THREE.Scene) {
+  const room = new THREE.Group();
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.18, 6.4), makeMaterial('#b98f67'));
+  floor.position.set(0, 0.02, 2.8); floor.receiveShadow = true; room.add(floor);
+  const wall = (x: number, z: number, w: number, d: number, color = '#e8ddc8') => {
+    const part = new THREE.Mesh(new THREE.BoxGeometry(w, 2.8, d), makeMaterial(color));
+    part.position.set(x, 1.4, z); part.castShadow = true; part.receiveShadow = true; room.add(part);
+  };
+  wall(-4.2, 2.8, 0.18, 6.4); wall(4.2, 2.8, 0.18, 6.4); wall(0, 6, 8.4, 0.18);
+  wall(-2.55, -0.4, 3.3, 0.18); wall(2.55, -0.4, 3.3, 0.18);
+  const addFurniture = (x: number, y: number, z: number, w: number, h: number, d: number, color: string) => {
+    const item = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), makeMaterial(color));
+    item.position.set(x, y + h / 2, z); item.castShadow = true; item.receiveShadow = true; room.add(item);
+  };
+  addFurniture(-2.7, 0.12, 4.25, 2.35, 0.42, 2.55, '#704a36');
+  addFurniture(-2.7, 0.36, 4.2, 2.18, 0.18, 2.35, '#e5d6bd');
+  addFurniture(-2.7, 0.52, 3.25, 0.82, 0.16, 0.55, '#f5eee0');
+  addFurniture(-3.65, 0.12, 1.15, 1.1, 2.1, 0.8, '#81563a');
+  addFurniture(2.55, 0.12, 4.65, 2.7, 0.55, 1.05, '#47766c');
+  addFurniture(2.55, 0.62, 4.95, 2.7, 0.72, 0.28, '#568b7e');
+  addFurniture(1.95, 0.12, 2.95, 1.45, 0.38, 0.78, '#8b603e');
+  addFurniture(2.65, 0.12, 1.35, 2.25, 0.42, 0.35, '#513c32');
+  addFurniture(2.65, 0.56, 1.35, 1.45, 0.85, 0.08, '#202b2d');
+  addFurniture(2.9, 0.12, -0.05, 2.0, 0.95, 0.85, '#9a7653');
+  addFurniture(3.55, 0.12, 0.55, 0.72, 1.75, 0.72, '#d9dedb');
+  addFurniture(1.95, 0.12, -0.05, 0.75, 0.88, 0.72, '#45494a');
+  addFurniture(-0.25, 0.68, 2.35, 1.45, 0.12, 1.0, '#946a45');
+  addFurniture(-0.72, 0.12, 1.75, 0.38, 0.62, 0.38, '#76533a');
+  addFurniture(0.22, 0.12, 2.95, 0.38, 0.62, 0.38, '#76533a');
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshStandardMaterial({ color: '#ffe2a0', emissive: '#8b612b', emissiveIntensity: 0.7 }));
+  bulb.position.set(0, 2.55, 2.8); room.add(bulb);
+  const light = new THREE.PointLight('#ffe1b0', 1.15, 13); light.position.set(0, 2.35, 2.8); room.add(light);
+  const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.9, 0.08), new THREE.MeshStandardMaterial({ color: '#8fc4d0', roughness: 0.25 }));
+  windowGlass.position.set(-4.08, 1.65, 3.0); room.add(windowGlass);
+  scene.add(room); room.visible = false; return room;
+}
+
 function buildWorld(scene: THREE.Scene) {
   scene.background = new THREE.Color('#a9d6dc');
   scene.fog = new THREE.Fog('#a9d6dc', 34, 92);
@@ -120,6 +158,7 @@ function App() {
   const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12, nearKiosk: false, nearHome: false, nearJob: false });
   const [shopOpen, setShopOpen] = useState(false);
   const [homeOpen, setHomeOpen] = useState(false);
+  const [insideHome, setInsideHome] = useState(false);
   const [jobOpen, setJobOpen] = useState(false);
   const [jobWorking, setJobWorking] = useState(false);
   const [workSeconds, setWorkSeconds] = useState(0);
@@ -222,6 +261,8 @@ function App() {
     scene.add(sun);
 
     const { kiosk, colliders } = buildWorld(scene);
+  const interior = buildStarterInterior(scene);
+  const isInsideRef = { current: false };
     const player = new THREE.Group();
     const skin = makeMaterial('#8f573b');
     const shirt = makeMaterial('#287f70');
@@ -236,6 +277,7 @@ function App() {
     legs.position.y = 0.34; player.add(legs);
     player.position.set(0, 0, 12);
     scene.add(player);
+    const outdoorObjects = scene.children.filter((object) => object !== hemi && object !== sun && object !== player && object !== interior);
 
     // Lightweight neighbourhood residents: simple original low-poly walkers.
     const pedestrians = [0, 1, 2, 3].map((index) => {
@@ -325,20 +367,16 @@ function App() {
         const movementSpeed = 5.2 * energyFactor * hungerFactor * thirstFactor;
         const stepX = direction.x * delta * movementSpeed;
         const stepZ = direction.z * delta * movementSpeed;
-        const canStandAt = (x: number, z: number) =>
-          x >= -45 && x <= 45 && z >= -48 && z <= 22 &&
-          !colliders.some((obstacle) =>
-            Math.abs(x - obstacle.x) < obstacle.halfX + 0.42 &&
-            Math.abs(z - obstacle.z) < obstacle.halfZ + 0.42
-          );
-        // Resolve each axis separately so the player can slide along walls.
+        const canStandAt = (x: number, z: number) => isInsideRef.current
+          ? x >= -3.65 && x <= 3.65 && z >= 0.05 && z <= 5.45
+          : x >= -45 && x <= 45 && z >= -48 && z <= 22 && !colliders.some((obstacle) => Math.abs(x - obstacle.x) < obstacle.halfX + 0.42 && Math.abs(z - obstacle.z) < obstacle.halfZ + 0.42);
         if (canStandAt(player.position.x + stepX, player.position.z)) player.position.x += stepX;
         if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
         player.rotation.y = Math.atan2(direction.x, direction.z);
       }
       target.set(player.position.x, 1.2, player.position.z);
       const look = cameraLookRef.current;
-      const orbitDistance = 10;
+      const orbitDistance = isInsideRef.current ? 6 : 10;
       const desiredCamera = new THREE.Vector3(
         player.position.x + Math.sin(look.yaw) * Math.cos(look.pitch) * orbitDistance,
         player.position.y + 1.2 + Math.sin(look.pitch) * orbitDistance,
@@ -347,7 +385,7 @@ function App() {
       cameraDirection.copy(desiredCamera).sub(target).normalize();
       cameraRay.set(target, cameraDirection);
       cameraRay.far = 10;
-      const cameraHits = cameraRay.intersectObjects(scene.children, true)
+      const cameraHits = isInsideRef.current ? [] : cameraRay.intersectObjects(scene.children, true)
         .filter((hit) => hit.distance > 1.35 && hit.object !== player);
       // Pull the camera forward when a wall, tree or roof blocks the follow view.
       const safeDistance = cameraHits.length ? Math.max(3.2, cameraHits[0].distance - 0.75) : 10;
@@ -358,9 +396,9 @@ function App() {
 
       if (performance.now() - lastUi > 250) {
         lastUi = performance.now();
-        const nearKiosk = player.position.distanceTo(kiosk) < 3.2;
-        const nearJob = Math.hypot(player.position.x + 7.5, player.position.z + 4.2) < 4.2;
-        const nearHome = Math.hypot(player.position.x, player.position.z + 1.7) < 2.8;
+        const nearKiosk = !isInsideRef.current && player.position.distanceTo(kiosk) < 3.2;
+        const nearJob = !isInsideRef.current && Math.hypot(player.position.x + 7.5, player.position.z + 4.2) < 4.2;
+        const nearHome = isInsideRef.current || Math.hypot(player.position.x, player.position.z + 1.7) < 2.8;
         setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome, nearJob }));
       }
       if (elapsed - lastNeedsTick >= 5) {
@@ -450,10 +488,11 @@ function App() {
         <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
-        {status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏠 HOME <span>Tap to take care of yourself</span></button>}
+        {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
+        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
         {jobOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label="Local job centre"><div className="shop-heading"><div><small>ADO-EKITI · COMMUNITY JOB BOARD</small><h2>Find a day's work</h2><p>Take a short neighbourhood delivery shift.</p></div><button className="shop-close" onClick={() => setJobOpen(false)} aria-label="Close jobs">×</button></div><div className="job-offer"><span>🛵</span><div><b>Neighbourhood Errand Assistant</b><small>Collect and deliver local orders around the area</small><strong>₦{jobPay.toLocaleString('en-NG')} per shift</strong></div></div><div className="job-requirements"><b>SHIFT DETAILS</b><span>Duration: 30 seconds (prototype)</span><span>Energy and hydration are used while working</span><span>Payment arrives when the shift is completed</span></div><button className="start-shift" onClick={() => { setJobOpen(false); setWorkSeconds(30); setJobWorking(true); setStatus((s) => ({ ...s, message: 'You started a delivery shift. Keep going!' })); }}>START SHIFT · EARN ₦{jobPay.toLocaleString('en-NG')}</button></section></div>}
         {jobWorking && <div className="working-banner"><span>🛵 ON DELIVERY SHIFT</span><b>{workSeconds}s remaining</b><small>Keep exploring — your shift is underway.</small></div>}
-        {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>Take care of yourself</h2><p>Rest, freshen up or prepare a meal.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button></div><div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
+        {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Your bedroom, living area and kitchen are ready.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button></div><div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
         {shopOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label="Neighbourhood kiosk"><div className="shop-heading"><div><small>ADO-EKITI · STREET KIOSK</small><h2>Neighbourhood Store</h2><p>Pick up something for the road.</p></div><button className="shop-close" onClick={() => setShopOpen(false)} aria-label="Close shop">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString("en-NG")}</strong></div><div className="shop-items">{shopItems.map((item) => <article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id] || 0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString("en-NG")}</strong><button onClick={() => buyItem(item)} disabled={wallet < item.price}>BUY</button></div></article>)}</div><p className="shop-note">Prototype purchases update your demo wallet and bag for this session.</p></section></div> }
         <div className="touch-controls" aria-label="Virtual joystick movement control">
           <div
