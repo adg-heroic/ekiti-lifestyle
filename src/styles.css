@@ -189,3 +189,12 @@ button{font:inherit}
 .home-object-actions button:active{border-color:#d6a85e;background:#d6a85e20}.home-object-skills{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:15px;padding:12px;border-radius:10px;background:#0e1b16}
 .home-object-skills b{flex-basis:100%;color:#d5ad6e;font-size:8px;letter-spacing:1px}.home-object-skills span{padding:6px 8px;border:1px solid #ffffff1b;border-radius:7px;color:#e5e9df;font-size:9px}
 @media(max-width:700px){.home-object-panel{padding:16px;border-radius:16px}.home-object-panel .shop-heading h2{font-size:18px}.home-object-actions button{padding:11px}.home-object-actions button b{font-size:10px}}
+
+
+/* Phase 2 · living character needs and mood */
+.need-track i.need-low{background:linear-gradient(90deg,#d7a14d,#d7a14d)}
+.need-track i.need-critical{background:linear-gradient(90deg,#df665d,#df665d)}
+.mood-status{display:flex;align-items:center;gap:7px;margin-top:2px;padding:8px 9px;border:1px solid #ffffff20;border-radius:9px;background:#ffffff0b;color:#d9e3d8;font-size:8px;letter-spacing:.6px}
+.mood-status span{color:#d5ad6e;font-weight:900}.mood-status b{font-size:9px;color:#f5f2e9}.mood-status strong{margin-left:auto;color:#f1d08c;font-size:10px}
+.mood-miserable b,.mood-low b{color:#f0a49a}.mood-excellent b,.mood-good b{color:#b9e0b5}
+@media(max-width:700px){.needs-panel{width:174px;gap:5px;padding:7px 8px}.need-row{grid-template-columns:58px 1fr 25px;gap:5px}.mood-status{padding:6px 7px;font-size:7px}.mood-status b{font-size:8px}.mood-status strong{font-size:9px}}

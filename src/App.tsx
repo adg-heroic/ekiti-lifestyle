@@ -3,7 +3,7 @@ import * as THREE from 'three';
 
 type Move = { x: number; z: number };
 type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean; nearJob: boolean; nearMarket: number; nearCampus: string };
-type Needs = { hunger: number; thirst: number; energy: number; hygiene: number };
+type Needs = { hunger: number; thirst: number; energy: number; fun: number; social: number; hygiene: number; bladder: number };
 type HomeObjectAction = 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie' | 'read-hustle' | 'read-charisma' | 'use-toilet';
 type HomeObjectData = { id: string; name: string; room: string; description: string; emoji: string; actions: Array<{ label: string; detail: string; duration: string; action: HomeObjectAction }> };
 type ResidentProfile = { id: number; name: string; age: number; role: string; greeting: string; day: string; localTip: string };
@@ -456,10 +456,12 @@ function App() {
   const [jobOpen, setJobOpen] = useState(false);
   const [jobWorking, setJobWorking] = useState(false);
   const [workSeconds, setWorkSeconds] = useState(0);
-  const [needs, setNeeds] = useState<Needs>({ hunger: 82, thirst: 78, energy: 90, hygiene: 88 });
+  const [needs, setNeeds] = useState<Needs>({ hunger: 82, thirst: 78, energy: 90, fun: 84, social: 76, hygiene: 88, bladder: 92 });
   const [gameClock, setGameClock] = useState({ day: 1, hour: 8, minute: 0 });
   const needsRef = useRef(needs);
   useEffect(() => { needsRef.current = needs; }, [needs]);
+  const moodScore = Math.round((needs.hunger + needs.thirst + needs.energy + needs.fun + needs.social + needs.hygiene + needs.bladder) / 7);
+  const moodLabel = moodScore >= 82 ? 'Excellent' : moodScore >= 65 ? 'Good' : moodScore >= 45 ? 'Okay' : moodScore >= 25 ? 'Low' : 'Miserable';
   const [wallet, setWallet] = useState(12000);
   const [lifeHubOpen, setLifeHubOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
@@ -521,6 +523,7 @@ function App() {
   const joinCommunityActivity = (activity: (typeof currentCommunityEvent.activities)[number]) => {
     if (completedEventActivities.includes(activity.id) || !atCommunitySquare) return;
     setEventProgress((progress) => ({ ...progress, [currentEventKey]: [...(progress[currentEventKey] || []), activity.id] }));
+    setNeeds((n) => ({ ...n, social: Math.min(100,n.social+14), fun: Math.min(100,n.fun+10), energy: Math.max(0,n.energy-2), bladder: Math.max(0,n.bladder-2) }));
     setCommunityReputation((score) => score + 5);
     setRelationshipScores((scores) => {
       const next = { ...scores };
@@ -538,7 +541,7 @@ function App() {
         setJobWorking(false);
         setWallet((cash) => cash + jobPay);
         setCareerExperience((xp) => { const next = xp + 1; if (next % 3 === 0) setCareerLevel((level) => level + 1); return next; });
-        setNeeds((n) => ({ ...n, energy: Math.max(0, n.energy - 14), hunger: Math.max(0, n.hunger - 8), thirst: Math.max(0, n.thirst - 10), hygiene: Math.max(0, n.hygiene - 4) }));
+        setNeeds((n) => ({ ...n, energy: Math.max(0, n.energy - 14), hunger: Math.max(0, n.hunger - 8), thirst: Math.max(0, n.thirst - 10), fun: Math.max(0, n.fun - 5), social: Math.max(0, n.social - 3), hygiene: Math.max(0, n.hygiene - 4), bladder: Math.max(0, n.bladder - 5) }));
         setStatus((s) => ({ ...s, message: `Shift complete! You earned ₦${jobPay.toLocaleString('en-NG')}.` }));
         return 0;
       }
@@ -590,7 +593,8 @@ function App() {
   };
   const buildRelationship = (person: string, amount: number) => {
     setRelationshipScores((scores) => ({ ...scores, [person]: Math.min(100, (scores[person] || 0) + amount) }));
-    setStatus((v) => ({ ...v, message: `You spent quality time with ${person}. Your friendship grew.` }));
+    setNeeds((n) => ({ ...n, social: Math.min(100, n.social + 9), fun: Math.min(100, n.fun + 3) }));
+    setStatus((v) => ({ ...v, message: `You spent quality time with ${person}. Your friendship and social wellbeing improved.` }));
   };
   const sitExam = () => {
     if (studyCredits < 5 || examPassed) return;
@@ -599,14 +603,23 @@ function App() {
   };
   const performHomeAction = (action: 'sleep' | 'shower' | 'cook' | 'sit' | 'dance' | 'movie') => {
     homeActivityRef.current=action; setHomeActivity(action);
-    if(action==='sit'){setStatus((s)=>({...s,message:'You sat down to relax.'}));}
-    else if(action==='dance'){setNeeds((n)=>({...n,energy:Math.max(0,n.energy-5)}));setStatus((s)=>({...s,message:'Music is playing — you are dancing in your living room!'}));}
-    else if(action==='movie'){setStatus((s)=>({...s,message:'Movie night! You are watching a film from the sofa.'}));}
+    if(action==='sit'){
+      setNeeds((n)=>({...n,fun:Math.min(100,n.fun+8),energy:Math.min(100,n.energy+3)}));
+      setStatus((s)=>({...s,message:'You sat down to relax. Your mood and energy lifted.'}));
+    }
+    else if(action==='dance'){
+      setNeeds((n)=>({...n,fun:Math.min(100,n.fun+22),energy:Math.max(0,n.energy-8),thirst:Math.max(0,n.thirst-4)}));
+      setStatus((s)=>({...s,message:'Music is playing — dancing lifted your fun, but used some energy.'}));
+    }
+    else if(action==='movie'){
+      setNeeds((n)=>({...n,fun:Math.min(100,n.fun+20),energy:Math.max(0,n.energy-2)}));
+      setStatus((s)=>({...s,message:'Movie night! You feel more entertained and relaxed.'}));
+    }
     else if (action === 'sleep') {
-      setNeeds((n) => ({ ...n, energy: 100, hunger: Math.max(0, n.hunger - 12), thirst: Math.max(0, n.thirst - 12) }));
-      setStatus((s) => ({ ...s, message: 'You had a good rest. Energy restored!' }));
+      setNeeds((n) => ({ ...n, energy: 100, hunger: Math.max(0, n.hunger - 12), thirst: Math.max(0, n.thirst - 12), fun: Math.min(100,n.fun+5), bladder: Math.max(0,n.bladder-12) }));
+      setStatus((s) => ({ ...s, message: 'You had a good rest. Energy restored. Remember to use the bathroom after waking.' }));
     } else if (action === 'shower') {
-      setNeeds((n) => ({ ...n, hygiene: 100, energy: Math.max(0, n.energy - 4) }));
+      setNeeds((n) => ({ ...n, hygiene: 100, energy: Math.max(0, n.energy - 4), fun: Math.min(100,n.fun+3) }));
       setStatus((s) => ({ ...s, message: 'Fresh and clean. Hygiene restored!' }));
     } else {
       const ingredient = (inventory.snack || 0) > 0 ? 'snack' : (inventory.fruit || 0) > 0 ? 'fruit' : '';
@@ -615,7 +628,7 @@ function App() {
         return;
       }
       setInventory((items) => ({ ...items, [ingredient]: Math.max(0, (items[ingredient] || 0) - 1) }));
-      setNeeds((n) => ({ ...n, hunger: Math.min(100, n.hunger + 48), energy: Math.max(0, n.energy - 3) }));
+      setNeeds((n) => ({ ...n, hunger: Math.min(100, n.hunger + 48), energy: Math.max(0, n.energy - 3), fun: Math.min(100,n.fun+4) }));
       setStatus((s) => ({ ...s, message: 'Meal ready! Your hunger has eased.' }));
     }
   };
@@ -624,7 +637,7 @@ function App() {
     setSelectedHomeObject(null);
     if (action === 'read-hustle') { setHomeSkills((skills) => ({ ...skills, hustle: skills.hustle + 1 })); setNeeds((n) => ({ ...n, energy: Math.max(0, n.energy - 2) })); setStatus((s) => ({ ...s, message: 'You finished a business book. Hustle skill improved!' })); }
     else if (action === 'read-charisma') { setHomeSkills((skills) => ({ ...skills, charisma: skills.charisma + 1 })); setStatus((s) => ({ ...s, message: 'You enjoyed a good novel. Charisma skill improved!' })); }
-    else if (action === 'use-toilet') { setStatus((s) => ({ ...s, message: 'You used the bathroom. Take a moment before heading out.' })); }
+    else if (action === 'use-toilet') { setNeeds((n) => ({ ...n, bladder: 100 })); setStatus((s) => ({ ...s, message: 'Bathroom break complete. Your bladder need is restored.' })); }
     else { performHomeAction(action); }
   };
   const selectHomeObjectAt = (clientX: number, clientY: number) => {
@@ -641,14 +654,14 @@ function App() {
     if ((inventory[id] || 0) < 1) return;
     setInventory((items) => ({ ...items, [id]: Math.max(0, (items[id] || 0) - 1) }));
     if (id === 'water') {
-      setNeeds((n) => ({ ...n, thirst: Math.min(100, n.thirst + 42) }));
+      setNeeds((n) => ({ ...n, thirst: Math.min(100, n.thirst + 42), fun: Math.min(100,n.fun+2) }));
       setStatus((s) => ({ ...s, message: 'You drank some water. Thirst refreshed!' }));
     } else if (id === 'softdrink') {
-      setNeeds((n) => ({ ...n, thirst: Math.min(100, n.thirst + 30), hunger: Math.min(100, n.hunger + 5) }));
+      setNeeds((n) => ({ ...n, thirst: Math.min(100, n.thirst + 30), hunger: Math.min(100, n.hunger + 5), fun: Math.min(100,n.fun+2) }));
       setStatus((s) => ({ ...s, message: 'You enjoyed a cold drink. Thirst eased!' }));
     } else {
       const isFruit = id === 'fruit';
-      setNeeds((n) => ({ ...n, hunger: Math.min(100, n.hunger + (isFruit ? 24 : 30)), thirst: Math.min(100, n.thirst + (isFruit ? 8 : 0)) }));
+      setNeeds((n) => ({ ...n, hunger: Math.min(100, n.hunger + (isFruit ? 24 : 30)), thirst: Math.min(100, n.thirst + (isFruit ? 8 : 0)), fun: Math.min(100,n.fun+3) }));
       setStatus((s) => ({ ...s, message: isFruit ? 'Fresh fruit eaten. Hunger eased!' : 'You enjoyed a local snack. Hunger eased!' }));
     }
   };
@@ -934,7 +947,9 @@ function App() {
         const energyFactor = currentNeeds.energy < 15 ? 0.62 : currentNeeds.energy < 35 ? 0.82 : 1;
         const hungerFactor = currentNeeds.hunger < 15 ? 0.82 : 1;
         const thirstFactor = currentNeeds.thirst < 15 ? 0.72 : currentNeeds.thirst < 30 ? 0.88 : 1;
-        const movementSpeed = (autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor;
+        const mood = (currentNeeds.hunger + currentNeeds.thirst + currentNeeds.energy + currentNeeds.fun + currentNeeds.social + currentNeeds.hygiene + currentNeeds.bladder) / 7;
+        const moodFactor = mood < 20 ? 0.78 : mood < 40 ? 0.9 : 1;
+        const movementSpeed = (autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor * moodFactor;
         const stepX = direction.x * delta * movementSpeed;
         const stepZ = direction.z * delta * movementSpeed;
         const canStandAt = (x: number, z: number) => isInsideRef.current
@@ -990,7 +1005,7 @@ function App() {
       }
       if (elapsed - lastNeedsTick >= 5) {
         lastNeedsTick = elapsed;
-        setNeeds((n) => ({ hunger: Math.max(0, n.hunger - 0.18), thirst: Math.max(0, n.thirst - 0.24), energy: Math.max(0, n.energy - 0.12), hygiene: Math.max(0, n.hygiene - 0.10) }));
+        setNeeds((n) => ({ ...n, hunger: Math.max(0, n.hunger - 0.18), thirst: Math.max(0, n.thirst - 0.24), energy: Math.max(0, n.energy - 0.12), fun: Math.max(0,n.fun-0.16), social: Math.max(0,n.social-0.08), hygiene: Math.max(0, n.hygiene - 0.10), bladder: Math.max(0,n.bladder-0.22) }));
       }
     };
     animate();
@@ -1096,7 +1111,7 @@ function App() {
         <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div><button className="city-map-toggle" onClick={()=>setMapOpen(true)}>🗺️ CITY MAP</button>
         <div className="player-card"><div className="player-avatar">👤</div><div><b>{playerLook.name}</b><small>New resident</small></div><span className="cash">₦{wallet.toLocaleString("en-NG")}</span></div>
         <div className="world-tip">{status.message}</div>
-        <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
+        <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['FUN', needs.fun, '🎮'], ['SOCIAL', needs.social, '🤝'], ['HYGIENE', needs.hygiene, '🧼'], ['BLADDER', needs.bladder, '🚻']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i className={value < 25 ? 'need-critical' : value < 45 ? 'need-low' : ''} style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}<div className={`mood-status mood-${moodLabel.toLowerCase()}`}><span>MOOD</span><b>{moodLabel}</b><strong>{moodScore}%</strong></div></div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
         {status.nearMarket >= 0 && !marketOpen && <button className="market-interact-prompt" onClick={()=>{setActiveMarket(status.nearMarket);setMarketOpen(true);}}>🏪 ENTER {marketNames[status.nearMarket].toUpperCase()} <span>Browse stalls · Buy goods</span></button>}
         {status.nearCampus && !campusOpen && <button className="campus-interact-prompt" onClick={()=>{setActiveCampus(status.nearCampus);setCampusOpen(true);}}>🎓 EXPLORE {status.nearCampus.toUpperCase()} <span>Enrol · Attend a class</span></button>}
@@ -1127,7 +1142,7 @@ function App() {
                  {selectedHomeObject && insideHome && <div className="shop-backdrop" role="presentation"><section className="home-object-panel" role="dialog" aria-modal="true" aria-label={selectedHomeObject.name}><div className="shop-heading"><div><small>{selectedHomeObject.room.toUpperCase()} · HOME INTERACTION</small><h2>{selectedHomeObject.emoji} {selectedHomeObject.name}</h2><p>{selectedHomeObject.description}</p></div><button className="shop-close" onClick={() => setSelectedHomeObject(null)} aria-label="Close furniture actions">×</button></div><div className="home-object-actions">{selectedHomeObject.actions.map((item) => <button key={item.action} onClick={() => performFurnitureAction(item.action)}><span>▶</span><div><b>{item.label}</b><small>{item.detail}</small><small className="home-object-duration">{item.duration} · No charge</small></div></button>)}</div><div className="home-object-skills"><b>HOME SKILLS</b><span>Hustle {homeSkills.hustle}</span><span>Charisma {homeSkills.charisma}</span></div></section></div>}
 {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Tap individual furniture in the 3D room to see its activities.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => { setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Tap a bed, sofa, television, kitchen fixture, shower or bookcase to interact.' })); }}><span>🪑</span><b>Select furniture</b><small>Tap objects in the room</small></button><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button><button onClick={()=>performHomeAction('sit')}><span>🛋️</span><b>Sit & relax</b><small>Use the sofa</small></button><button onClick={()=>performHomeAction('dance')}><span>💃</span><b>Dance</b><small>Move to music</small></button><button onClick={()=>performHomeAction('movie')}><span>📺</span><b>Watch movie</b><small>Movie night</small></button><button onClick={()=>{homeActivityRef.current='';setHomeActivity('');setStatus((s)=>({...s,message:'You stood up and are ready to move.'}));}}><span>🚶</span><b>Stand up</b><small>Return to movement</small></button></div>{homeActivity&&<div className="home-activity-status">CURRENT ACTIVITY: {homeActivity.toUpperCase()} · Choose Stand up to move again.</div>}<div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
         {marketOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label={marketNames[activeMarket]}><div className="shop-heading"><div><small>ADO-EKITI · OPEN MARKET</small><h2>{marketNames[activeMarket]}</h2><p>{['Foodstuff, grains and fresh produce','Clothing, fabrics and footwear','Household goods and kitchen supplies'][activeMarket]}</p></div><button className="shop-close" onClick={()=>setMarketOpen(false)} aria-label="Close market">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString('en-NG')}</strong></div><div className="shop-items">{marketProducts[activeMarket].map((item)=><article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id]||0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString('en-NG')}</strong><button onClick={()=>{if(wallet<item.price)return;setWallet(v=>v-item.price);setInventory(v=>({...v,[item.id]:(v[item.id]||0)+1}));setStatus(v=>({...v,message:`${item.name} purchased at ${marketNames[activeMarket]}.`}));}} disabled={wallet<item.price}>BUY</button></div></article>)}</div><p className="shop-note">Each market specialises in a different range of goods. Purchases are added to your bag.</p></section></div>}
-        {campusOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label={`${activeCampus} campus`}><div className="shop-heading"><div><small>ADO-EKITI · CAMPUS LIFE</small><h2>{activeCampus}</h2><p>Explore campus life and build your education.</p></div><button className="shop-close" onClick={()=>setCampusOpen(false)} aria-label="Close campus">×</button></div><div className="job-offer"><span>🎓</span><div><b>{enrolledCampus===activeCampus?'You are enrolled here':'Become a student'}</b><small>{enrolledCampus===activeCampus?'Attend lessons, pass your exam and graduate.':'Choose this institution and a course to begin your studies.'}</small><strong>{studyCredits} study credits · {examPassed?'Exam passed':'Exam pending'}</strong></div></div>{enrolledCampus!==activeCampus?<><label className="course-label">CHOOSE YOUR COURSE<select value={studentCourse} onChange={e=>setStudentCourse(e.target.value)}><option>Business Administration</option><option>Computer Science</option><option>Mass Communication</option><option>Accounting</option><option>Public Administration</option><option>Computer Engineering</option></select></label><button className="start-shift" onClick={()=>{setEnrolledCampus(activeCampus);setStudyCredits(0);setExamPassed(false);setGraduated(false);setStatus(v=>({...v,message:`You enrolled at ${activeCampus} to study ${studentCourse}. Your student journey begins!`}));}}>ENROL AT {activeCampus.toUpperCase()}</button></>:<><div className="job-requirements"><b>STUDENT LIFE</b><span>Attend classes to earn study credits.</span><span>Classes use some energy and advance your daily routine.</span><span>Earn 5 credits, pass your course assessment and graduate.</span></div><button className="start-shift" onClick={()=>{setStudyCredits(v=>v+1);setNeeds(n=>({...n,energy:Math.max(0,n.energy-8),hunger:Math.max(0,n.hunger-3)}));setStatus(v=>({...v,message:`Class completed at ${activeCampus}. You earned 1 study credit.`}));setCampusOpen(false);}}>ATTEND CLASS · EARN 1 CREDIT</button><button className="campus-switch" disabled={studyCredits<5||examPassed} onClick={sitExam}>SIT COURSE EXAM · 5 CREDITS</button>{examPassed&&<p className="course-success">Course exam passed. Visit your Life Hub to graduate.</p>}<button className="campus-switch" onClick={()=>{setEnrolledCampus('');setStudyCredits(0);setExamPassed(false);setGraduated(false);}}>LEAVE THIS INSTITUTION</button></>}</section></div>}
+        {campusOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label={`${activeCampus} campus`}><div className="shop-heading"><div><small>ADO-EKITI · CAMPUS LIFE</small><h2>{activeCampus}</h2><p>Explore campus life and build your education.</p></div><button className="shop-close" onClick={()=>setCampusOpen(false)} aria-label="Close campus">×</button></div><div className="job-offer"><span>🎓</span><div><b>{enrolledCampus===activeCampus?'You are enrolled here':'Become a student'}</b><small>{enrolledCampus===activeCampus?'Attend lessons, pass your exam and graduate.':'Choose this institution and a course to begin your studies.'}</small><strong>{studyCredits} study credits · {examPassed?'Exam passed':'Exam pending'}</strong></div></div>{enrolledCampus!==activeCampus?<><label className="course-label">CHOOSE YOUR COURSE<select value={studentCourse} onChange={e=>setStudentCourse(e.target.value)}><option>Business Administration</option><option>Computer Science</option><option>Mass Communication</option><option>Accounting</option><option>Public Administration</option><option>Computer Engineering</option></select></label><button className="start-shift" onClick={()=>{setEnrolledCampus(activeCampus);setStudyCredits(0);setExamPassed(false);setGraduated(false);setStatus(v=>({...v,message:`You enrolled at ${activeCampus} to study ${studentCourse}. Your student journey begins!`}));}}>ENROL AT {activeCampus.toUpperCase()}</button></>:<><div className="job-requirements"><b>STUDENT LIFE</b><span>Attend classes to earn study credits.</span><span>Classes use some energy and advance your daily routine.</span><span>Earn 5 credits, pass your course assessment and graduate.</span></div><button className="start-shift" onClick={()=>{setStudyCredits(v=>v+1);setNeeds(n=>({...n,energy:Math.max(0,n.energy-8),hunger:Math.max(0,n.hunger-3),fun:Math.max(0,n.fun-2),bladder:Math.max(0,n.bladder-2)}));setStatus(v=>({...v,message:`Class completed at ${activeCampus}. You earned 1 study credit.`}));setCampusOpen(false);}}>ATTEND CLASS · EARN 1 CREDIT</button><button className="campus-switch" disabled={studyCredits<5||examPassed} onClick={sitExam}>SIT COURSE EXAM · 5 CREDITS</button>{examPassed&&<p className="course-success">Course exam passed. Visit your Life Hub to graduate.</p>}<button className="campus-switch" onClick={()=>{setEnrolledCampus('');setStudyCredits(0);setExamPassed(false);setGraduated(false);}}>LEAVE THIS INSTITUTION</button></>}</section></div>}
         {shopOpen && <div className="shop-backdrop" role="presentation"><section className="shop-panel" role="dialog" aria-modal="true" aria-label="Neighbourhood kiosk"><div className="shop-heading"><div><small>ADO-EKITI · STREET KIOSK</small><h2>Neighbourhood Store</h2><p>Pick up something for the road.</p></div><button className="shop-close" onClick={() => setShopOpen(false)} aria-label="Close shop">×</button></div><div className="shop-wallet">YOUR WALLET <strong>₦{wallet.toLocaleString("en-NG")}</strong></div><div className="shop-items">{shopItems.map((item) => <article className="shop-item" key={item.id}><div className="shop-emoji">{item.emoji}</div><div className="shop-item-copy"><b>{item.name}</b><small>{item.detail}</small><small className="owned">In bag: {inventory[item.id] || 0}</small></div><div className="shop-buy"><strong>₦{item.price.toLocaleString("en-NG")}</strong><button onClick={() => buyItem(item)} disabled={wallet < item.price}>BUY</button></div></article>)}</div><p className="shop-note">Prototype purchases update your demo wallet and bag for this session.</p></section></div> }
         <div className="touch-controls" aria-label="Virtual joystick movement control">
           <div
