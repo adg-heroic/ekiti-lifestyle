@@ -106,3 +106,23 @@ button{font:inherit}
 .market-interact-prompt span,.campus-interact-prompt span{display:block;margin-top:4px;color:#c0cbbf;font-size:10px;font-weight:500;letter-spacing:0}
 .campus-switch{width:100%;margin-top:9px;border:1px solid #ffffff24;border-radius:10px;padding:11px;background:#ffffff0b;color:#e8dfce;font-size:10px;font-weight:800;cursor:pointer}
 @media(max-width:700px){.market-interact-prompt,.campus-interact-prompt{top:39%;padding:11px 13px;font-size:10px;max-width:92%;white-space:normal;text-align:center}}
+
+
+/* Task 2 · Life simulation hub */
+.topbar-actions{display:flex;align-items:center;gap:16px}
+.life-hub-toggle{border:1px solid #d6a85e88;border-radius:10px;padding:10px 13px;background:#d6a85e18;color:#f1d08c;font-size:9px;font-weight:900;letter-spacing:.8px;cursor:pointer}
+.life-hub-panel{width:min(760px,96vw);max-height:92%;overflow:auto;border:1px solid #ffffff2b;border-radius:20px;padding:22px;background:linear-gradient(160deg,#293e32,#14231d 75%);color:#f5f2e9;box-shadow:0 24px 70px #0009}
+.life-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:18px 0}
+.life-summary>div{padding:12px;border:1px solid #ffffff1c;border-radius:11px;background:#0e1b16}
+.life-summary small,.life-summary b{display:block}.life-summary small{color:#aebeb1;font-size:8px;letter-spacing:1px}.life-summary b{margin-top:6px;color:#f1d08c;font-size:15px}
+.life-section{margin-top:14px;padding:15px;border:1px solid #ffffff1c;border-radius:13px;background:#ffffff08}
+.life-section h3{margin:0 0 7px;color:#f1d08c;font-size:13px}.life-section p{margin:6px 0 12px;color:#c1cbbf;font-size:10px;line-height:1.55}
+.life-career-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.life-career-list button{display:grid;grid-template-columns:30px 1fr;gap:3px 8px;align-items:center;padding:10px;border:1px solid #ffffff22;border-radius:10px;background:#ffffff08;color:#f5f2e9;text-align:left;cursor:pointer}
+.life-career-list button.selected{border-color:#d6a85e;background:#d6a85e20}.life-career-list button>span{grid-row:span 2;font-size:22px}.life-career-list button>b{font-size:10px}.life-career-list button>small{color:#d6b77e;font-size:9px}
+.life-action{width:100%;margin-top:10px;border:0;border-radius:9px;padding:12px;background:#d6a85e;color:#1b281f;font-size:10px;font-weight:900;cursor:pointer}.life-action:disabled,.life-actions button:disabled{opacity:.4;cursor:not-allowed}
+.life-actions{display:flex;flex-wrap:wrap;gap:8px}.life-actions button,.life-friends button{border:1px solid #ffffff28;border-radius:9px;padding:10px;background:#ffffff0b;color:#f1e8d7;font-size:9px;font-weight:800;cursor:pointer}
+.life-friends{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.life-friends>div{display:grid;grid-template-columns:1fr auto;gap:6px;padding:10px;border-radius:9px;background:#0e1b16}.life-friends span,.life-friends b{font-size:10px}.life-friends b{color:#f1d08c}.life-progress{grid-column:1/-1;height:5px;border-radius:9px;background:#ffffff20;overflow:hidden}.life-progress i{display:block;height:100%;background:#83c78b}.life-friends button{grid-column:1/-1}
+.course-label{display:grid;gap:7px;margin:14px 0;color:#d6b77e;font-size:9px;font-weight:900;letter-spacing:1px}.course-label select{width:100%;padding:11px;border:1px solid #ffffff30;border-radius:9px;background:#14231d;color:#f5f2e9}
+.course-success{padding:10px;border-radius:8px;background:#83c78b18;color:#b9e0b5!important}
+@media(max-width:700px){.topbar-actions{gap:6px}.life-hub-toggle{padding:8px 8px;font-size:8px}.day-chip{font-size:7px}.life-hub-panel{padding:15px;border-radius:16px}.life-summary{gap:6px}.life-summary>div{padding:9px}.life-summary b{font-size:11px}.life-section{padding:11px}.life-career-list{grid-template-columns:1fr 1fr}.life-friends{grid-template-columns:1fr 1fr}}
