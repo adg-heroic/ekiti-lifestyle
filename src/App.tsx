@@ -383,7 +383,7 @@ function App() {
     // Distinct stylized residents: original Nigerian street characters with varied faces, hair and outfits.
     const pedestrians = [0, 1, 2, 3, 4].map((index) => {
       const resident = buildResident(index);
-      resident.position.set(-38 + index * 15, 0, index % 2 === 0 ? -7.1 : -13.0);
+      resident.position.set(-8 + index * 4, 0, index % 2 === 0 ? 8.2 : 10.4);
       scene.add(resident);
       return resident;
     });
@@ -430,7 +430,8 @@ function App() {
         const progress = ((elapsed * speed + phase) % 2);
         const travel = progress <= 1 ? progress : 2 - progress;
         const gait = Math.sin(elapsed * 7 + phase * 12);
-        resident.position.x = -39 + travel * 78;
+        resident.position.x = -12 + travel * 24;
+        resident.position.z = (resident.userData.profile as ResidentProfile).id % 2 === 0 ? 8.2 : 10.4;
         resident.rotation.y = progress <= 1 ? Math.PI / 2 : -Math.PI / 2;
         leftLeg.rotation.x = gait * 0.38;
         rightLeg.rotation.x = -gait * 0.38;
@@ -493,7 +494,7 @@ function App() {
         if (!isInsideRef.current) {
           for (const resident of pedestrians) {
             const distance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
-            if (distance < 4.1 && (!closest || distance < closest.distance)) {
+            if (distance < 5.8 && (!closest || distance < closest.distance)) {
               closest = { profile: resident.userData.profile as ResidentProfile, distance };
             }
           }
