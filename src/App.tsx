@@ -801,7 +801,7 @@ function App() {
       if (object.userData.roomSurface === 'floor') (object.material as THREE.MeshStandardMaterial).color.set(roomDesign.floor);
       if (object.userData.roomSurface === 'wall') (object.material as THREE.MeshStandardMaterial).color.set(roomDesign.wall);
     });
-  }, [placedFurniture, roomDesign]);
+  }, [placedFurniture, roomDesign, insideHome]);
 
   const selectHomeObjectAt = (clientX: number, clientY: number) => {
     if (!insideHome || !cameraRef.current || !hostRef.current) return;
