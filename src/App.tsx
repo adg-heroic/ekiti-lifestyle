@@ -490,11 +490,15 @@ function App() {
         const nearJob = !isInsideRef.current && Math.hypot(player.position.x + 7.5, player.position.z + 4.2) < 4.2;
         const nearHome = isInsideRef.current || Math.hypot(player.position.x, player.position.z + 1.7) < 2.8;
         let closest: { profile: ResidentProfile; distance: number } | null = null;
-        if (!isInsideRef.current) pedestrians.forEach((resident) => {
-          const distance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
-          if (distance < 4.1 && (!closest || distance < closest.distance)) closest = { profile: resident.userData.profile as ResidentProfile, distance };
-        });
-        setNearbyResident(closest ? closest.profile : null);
+        if (!isInsideRef.current) {
+          for (const resident of pedestrians) {
+            const distance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
+            if (distance < 4.1 && (!closest || distance < closest.distance)) {
+              closest = { profile: resident.userData.profile as ResidentProfile, distance };
+            }
+          }
+        }
+        setNearbyResident(closest?.profile ?? null);
         setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome, nearJob }));
       }
       if (elapsed - lastNeedsTick >= 5) {
