@@ -597,8 +597,11 @@ function App() {
       });
       // Translate movement into the camera's horizontal facing direction.
       // This keeps joystick-forward moving toward the centre of the view after the player rotates the camera.
-      const localX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + moveRef.current.x;
-      const localZ = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + moveRef.current.z;
+      const manualX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + moveRef.current.x;
+      const manualZ = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + moveRef.current.z;
+      if(Math.abs(manualX)+Math.abs(manualZ)>0.08 && autoDestinationRef.current){autoDestinationRef.current=null;autoPathRef.current=[];setAutoTravel(false);}
+      let localX=manualX,localZ=manualZ;
+      if(autoDestinationRef.current&&!isInsideRef.current){const blocked=(x:number,z:number)=>colliders.some((o)=>Math.abs(x-o.x)<o.halfX+0.48&&Math.abs(z-o.z)<o.halfZ+0.48);if(!autoPathRef.current.length){autoPathRef.current=findResidentPath(player.position.x,player.position.z,autoDestinationRef.current.x,autoDestinationRef.current.z,blocked);autoPathIndexRef.current=0;}const path=autoPathRef.current;while(autoPathIndexRef.current<path.length&&Math.hypot(path[autoPathIndexRef.current][0]-player.position.x,path[autoPathIndexRef.current][1]-player.position.z)<0.7)autoPathIndexRef.current++;const waypoint=path[autoPathIndexRef.current];if(waypoint){localX=waypoint[0]-player.position.x;localZ=waypoint[1]-player.position.z;}else{autoDestinationRef.current=null;autoPathRef.current=[];setAutoTravel(false);setStatus((v)=>({...v,message:'You have arrived at your destination.'}));}}
       const yaw = cameraLookRef.current.yaw;
       const inputX = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
       const inputZ = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
@@ -609,7 +612,7 @@ function App() {
         const energyFactor = currentNeeds.energy < 15 ? 0.62 : currentNeeds.energy < 35 ? 0.82 : 1;
         const hungerFactor = currentNeeds.hunger < 15 ? 0.82 : 1;
         const thirstFactor = currentNeeds.thirst < 15 ? 0.72 : currentNeeds.thirst < 30 ? 0.88 : 1;
-        const movementSpeed = 5.2 * energyFactor * hungerFactor * thirstFactor;
+        const movementSpeed = (autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor;
         const stepX = direction.x * delta * movementSpeed;
         const stepZ = direction.z * delta * movementSpeed;
         const canStandAt = (x: number, z: number) => isInsideRef.current
@@ -619,6 +622,7 @@ function App() {
         if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
         player.rotation.y = Math.atan2(direction.x, direction.z);
       }
+      if(homeActivityRef.current==='dance'){player.position.y=0.08+Math.abs(Math.sin(elapsed*8))*0.16;player.rotation.z=Math.sin(elapsed*8)*0.12;}else if(homeActivityRef.current==='sit'||homeActivityRef.current==='movie'){player.position.y=-0.18;player.rotation.z=0;}else{player.position.y=0;player.rotation.z=0;}
       target.set(player.position.x, 1.2, player.position.z);
       const look = cameraLookRef.current;
       const orbitDistance = isInsideRef.current ? 8 : 10;
