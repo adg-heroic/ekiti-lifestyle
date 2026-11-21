@@ -71,6 +71,99 @@ function buildStarterInterior(scene: THREE.Scene) {
   scene.add(room); room.visible = false; return room;
 }
 
+function buildResident(index: number) {
+  const resident = new THREE.Group();
+  const designs = [
+    { skin: '#70432f', shirt: '#d5a45f', lower: '#263b50', hair: '#211b18', style: 'afro', role: 'trader' },
+    { skin: '#8f573b', shirt: '#397c70', lower: '#49344d', hair: '#241d1a', style: 'wrap', role: 'resident' },
+    { skin: '#5c392b', shirt: '#e6dfcf', lower: '#344b70', hair: '#191614', style: 'short', role: 'worker' },
+    { skin: '#a66b4d', shirt: '#b95d48', lower: '#343d50', hair: '#30221b', style: 'braids', role: 'student' },
+    { skin: '#794a36', shirt: '#668b50', lower: '#76543c', hair: '#211a17', style: 'cap', role: 'resident' }
+  ];
+  const design = designs[index % designs.length];
+  const skin = makeMaterial(design.skin);
+  const shirt = makeMaterial(design.shirt);
+  const lower = makeMaterial(design.lower);
+  const hair = makeMaterial(design.hair);
+  const shoe = makeMaterial('#292b2b');
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.62, 4, 8), shirt);
+  torso.position.y = 1.16; torso.castShadow = true; resident.add(torso);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.13, 0.2, 8), skin);
+  neck.position.y = 1.65; resident.add(neck);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.285, 12, 10), skin);
+  head.position.y = 1.91; head.castShadow = true; resident.add(head);
+  const earGeo = new THREE.SphereGeometry(0.065, 8, 6);
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(earGeo, skin); ear.position.set(side * 0.27, 1.91, 0); resident.add(ear);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.027, 7, 6), makeMaterial('#211b18'));
+    eye.position.set(side * 0.105, 1.96, 0.255); resident.add(eye);
+  }
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 7, 6), skin);
+  nose.scale.set(0.8, 1.15, 0.8); nose.position.set(0, 1.88, 0.285); resident.add(nose);
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.018, 0.018), makeMaterial('#542d28'));
+  mouth.position.set(0, 1.79, 0.272); resident.add(mouth);
+
+  if (design.style === 'afro' || design.style === 'braids') {
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(design.style === 'afro' ? 0.34 : 0.29, 10, 8), hair);
+    crown.scale.set(1, design.style === 'afro' ? 0.82 : 0.62, 1); crown.position.set(0, 2.12, -0.015); resident.add(crown);
+    if (design.style === 'braids') {
+      for (const side of [-1, 1]) for (let n = 0; n < 3; n++) {
+        const braid = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.58, 6), hair);
+        braid.position.set(side * (0.22 + n * 0.025), 1.82 - n * 0.08, -0.04 - n * 0.045);
+        braid.rotation.z = side * -0.12; resident.add(braid);
+      }
+    }
+  } else if (design.style === 'wrap') {
+    const wrap = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), makeMaterial('#e3a9a0'));
+    wrap.scale.set(1.08, 0.58, 1.02); wrap.position.set(0, 2.14, -0.015); resident.add(wrap);
+    const knot = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 7), makeMaterial('#c77f79'));
+    knot.position.set(0, 2.28, -0.2); resident.add(knot);
+  } else if (design.style === 'cap') {
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 0.13, 10), makeMaterial('#c7a46b'));
+    cap.position.set(0, 2.13, 0); resident.add(cap);
+    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.035, 0.2), makeMaterial('#b58c55'));
+    brim.position.set(0, 2.08, 0.17); resident.add(brim);
+  } else {
+    const closeHair = new THREE.Mesh(new THREE.SphereGeometry(0.29, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.52), hair);
+    closeHair.position.set(0, 2.03, -0.015); resident.add(closeHair);
+  }
+
+  const leftArm = new THREE.Group(); leftArm.position.set(-0.34, 1.42, 0);
+  const rightArm = new THREE.Group(); rightArm.position.set(0.34, 1.42, 0);
+  for (const [pivot, side] of [[leftArm, -1], [rightArm, 1]] as Array<[THREE.Group, number]>) {
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.42, 3, 7), shirt);
+    arm.position.set(0, -0.27, 0); arm.rotation.z = side * -0.08; arm.castShadow = true; pivot.add(arm);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.095, 7, 6), skin);
+    hand.position.set(0, -0.56, 0.015); pivot.add(hand);
+  }
+  resident.add(leftArm, rightArm);
+
+  const leftLeg = new THREE.Group(); leftLeg.position.set(-0.145, 0.72, 0);
+  const rightLeg = new THREE.Group(); rightLeg.position.set(0.145, 0.72, 0);
+  for (const [pivot, side] of [[leftLeg, -1], [rightLeg, 1]] as Array<[THREE.Group, number]>) {
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.42, 3, 7), lower);
+    leg.position.y = -0.29; leg.castShadow = true; pivot.add(leg);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.32), shoe);
+    foot.position.set(0, -0.58, 0.07); pivot.add(foot);
+  }
+  resident.add(leftLeg, rightLeg);
+
+  // Small outfit details help silhouettes read differently at normal phone viewing distance.
+  const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.14, 0.025), makeMaterial(design.role === 'worker' ? '#d8d0bd' : design.shirt));
+  pocket.position.set(0.16, 1.28, 0.29); resident.add(pocket);
+  if (design.role === 'trader') {
+    const wrapper = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.29, 0.42, 9), makeMaterial('#b35f48'));
+    wrapper.position.set(0, 0.57, 0); resident.add(wrapper);
+  }
+  resident.userData = {
+    phase: index * 0.31,
+    speed: 0.032 + index * 0.003,
+    leftLeg, rightLeg, leftArm, rightArm,
+    role: design.role
+  };
+  return resident;
+}
+
 function buildWorld(scene: THREE.Scene) {
   scene.background = new THREE.Color('#a9d6dc');
   scene.fog = new THREE.Fog('#a9d6dc', 34, 92);
@@ -282,28 +375,10 @@ function App() {
     player.position.set(0, 0, 12);
     scene.add(player);
     playerRef.current = player;
-    // Lightweight neighbourhood residents: simple original low-poly walkers.
-    const pedestrians = [0, 1, 2, 3].map((index) => {
-      const resident = new THREE.Group();
-      const palette = ['#bd754d', '#d6b16f', '#6b8e75', '#9b789c'];
-      const shirt = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.55, 3, 7), makeMaterial(palette[index]));
-      shirt.position.y = 1.02;
-      shirt.castShadow = true;
-      resident.add(shirt);
-      const face = new THREE.Mesh(new THREE.SphereGeometry(0.25, 9, 8), makeMaterial('#8f573b'));
-      face.position.y = 1.78;
-      face.castShadow = true;
-      resident.add(face);
-      const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.255, 8, 7, 0, Math.PI * 2, 0, Math.PI * 0.55), makeMaterial('#28211d'));
-      hairCap.position.y = 1.88;
-      resident.add(hairCap);
-      const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.52, 0.19), makeMaterial('#39485e'));
-      leftLeg.position.set(-0.13, 0.34, 0);
-      const rightLeg = leftLeg.clone();
-      rightLeg.position.x = 0.13;
-      resident.add(leftLeg, rightLeg);
-      resident.position.set(-38 + index * 19, 0, index % 2 === 0 ? -8.2 : -11.8);
-      resident.userData = { phase: index * 0.23, speed: 0.035 + index * 0.004, leftLeg, rightLeg };
+    // Distinct stylized residents: original Nigerian street characters with varied faces, hair and outfits.
+    const pedestrians = [0, 1, 2, 3, 4].map((index) => {
+      const resident = buildResident(index);
+      resident.position.set(-38 + index * 15, 0, index % 2 === 0 ? -7.1 : -13.0);
       scene.add(resident);
       return resident;
     });
@@ -343,16 +418,20 @@ function App() {
       const delta = Math.min(clock.getDelta(), 0.04);
       const elapsed = clock.elapsedTime;
       pedestrians.forEach((resident) => {
-        const { phase, speed, leftLeg, rightLeg } = resident.userData as {
-          phase: number; speed: number; leftLeg: THREE.Mesh; rightLeg: THREE.Mesh;
+        const { phase, speed, leftLeg, rightLeg, leftArm, rightArm } = resident.userData as {
+          phase: number; speed: number; leftLeg: THREE.Group; rightLeg: THREE.Group;
+          leftArm: THREE.Group; rightArm: THREE.Group;
         };
         const progress = ((elapsed * speed + phase) % 2);
         const travel = progress <= 1 ? progress : 2 - progress;
+        const gait = Math.sin(elapsed * 7 + phase * 12);
         resident.position.x = -39 + travel * 78;
         resident.rotation.y = progress <= 1 ? Math.PI / 2 : -Math.PI / 2;
-        leftLeg.rotation.x = Math.sin(elapsed * 7 + phase * 12) * 0.42;
-        rightLeg.rotation.x = -leftLeg.rotation.x;
-        resident.position.y = Math.abs(Math.sin(elapsed * 7 + phase * 12)) * 0.035;
+        leftLeg.rotation.x = gait * 0.38;
+        rightLeg.rotation.x = -gait * 0.38;
+        leftArm.rotation.x = -gait * 0.2;
+        rightArm.rotation.x = gait * 0.2;
+        resident.position.y = Math.abs(gait) * 0.018;
       });
       // Translate movement into the camera's horizontal facing direction.
       // This keeps joystick-forward moving toward the centre of the view after the player rotates the camera.
