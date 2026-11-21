@@ -198,3 +198,28 @@ button{font:inherit}
 .mood-status span{color:#d5ad6e;font-weight:900}.mood-status b{font-size:9px;color:#f5f2e9}.mood-status strong{margin-left:auto;color:#f1d08c;font-size:10px}
 .mood-miserable b,.mood-low b{color:#f0a49a}.mood-excellent b,.mood-good b{color:#b9e0b5}
 @media(max-width:700px){.needs-panel{width:174px;gap:5px;padding:7px 8px}.need-row{grid-template-columns:58px 1fr 25px;gap:5px}.mood-status{padding:6px 7px;font-size:7px}.mood-status b{font-size:8px}.mood-status strong{font-size:9px}}
+
+/* Character profile */
+.player-card-button{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%;border:0}
+.player-card-button:focus-visible,.profile-tabs button:focus-visible{outline:2px solid #e4b66d;outline-offset:3px}
+.profile-backdrop{z-index:45}
+.profile-panel{width:min(720px,calc(100vw - 28px));max-height:min(88vh,850px);overflow:auto;background:#f8f4ec;color:#302b25;border-radius:22px;padding:clamp(16px,3vw,26px);box-shadow:0 24px 80px #101b2380}
+.profile-hero{display:flex;align-items:center;gap:14px;background:linear-gradient(120deg,#244e48,#376d61);color:#fff;border-radius:16px;padding:16px;margin:14px 0}
+.profile-avatar{width:54px;height:54px;border-radius:16px;background:#ffffff20;display:grid;place-items:center;font-size:30px}
+.profile-hero>div:nth-child(2){display:grid;gap:3px;flex:1}.profile-hero>div:nth-child(2)>b{font-size:19px}.profile-hero span,.profile-hero small{font-size:12px;opacity:.82}
+.profile-hero>strong{font-size:24px;text-align:right}.profile-hero>strong small{display:block;font-size:9px;letter-spacing:1px}
+.profile-tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:thin}
+.profile-tabs button{flex:0 0 auto;border:1px solid #ddd3c4;background:#fff;border-radius:11px;padding:9px 12px;color:#53483c;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center}
+.profile-tabs button.active{background:#244e48;color:#fff;border-color:#244e48}
+.profile-content{padding:12px 2px 4px}.profile-content h3{margin:4px 0 7px;font-size:17px}.profile-content>p{color:#776e63;font-size:13px;line-height:1.5;margin:0 0 16px}
+.profile-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:20px}
+.profile-stat-grid>div,.profile-highlight{background:#fff;border:1px solid #e9e0d4;border-radius:12px;padding:12px;display:grid;gap:5px}
+.profile-stat-grid small,.profile-highlight small{font-size:9px;letter-spacing:1px;color:#8a7d6e}.profile-stat-grid b{font-size:17px}
+.profile-quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.profile-quick-actions button,.profile-primary{border:0;border-radius:10px;padding:12px;background:#e7eee8;color:#244e48;font-weight:700;font-size:12px}
+.profile-meter-list{display:grid;gap:13px}.profile-meter{display:grid;grid-template-columns:105px 1fr 42px;align-items:center;gap:9px;font-size:12px}.profile-meter>div,.profile-people-list i{height:9px;border-radius:20px;background:#e6dfd5;overflow:hidden}.profile-meter>div>i,.profile-people-list em{height:100%;display:block;border-radius:20px;background:#5d9c79}.profile-meter>div>i.low{background:#d69a43}.profile-meter>div>i.critical{background:#c75a4b}.profile-meter>b{text-align:right}
+.profile-mood-note{margin-top:16px;padding:12px;border-radius:10px;background:#e9eee8;font-size:13px}
+.profile-skill-row,.profile-goal-list>div{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #e8dfd4;font-size:13px}.profile-skill-row b,.profile-goal-list b{font-size:12px;text-align:right}
+.profile-people-list{display:grid;gap:10px}.profile-people-list>div{display:grid;grid-template-columns:1fr 42px;gap:7px;font-size:12px}.profile-people-list i{grid-column:1/-1;display:block}.profile-people-list em{background:#c08d4d}
+.profile-highlight{margin-bottom:12px}.profile-highlight>b{font-size:17px}.profile-highlight>span{font-size:12px;color:#776e63}
+.profile-primary{margin-top:15px;background:#244e48;color:#fff}
+@media(max-width:600px){.profile-panel{width:calc(100vw - 18px);max-height:91vh;border-radius:17px;padding:14px}.profile-quick-actions{grid-template-columns:1fr}.profile-meter{grid-template-columns:88px 1fr 38px;font-size:11px}.profile-hero{padding:12px}.profile-tabs button{padding:9px 10px}}
