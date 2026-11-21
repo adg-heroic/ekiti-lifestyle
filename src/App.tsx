@@ -87,31 +87,52 @@ function buildResident(index: number) {
   const lower = makeMaterial(design.lower);
   const hair = makeMaterial(design.hair);
   const shoe = makeMaterial('#292b2b');
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.62, 4, 8), shirt);
-  torso.position.y = 1.16; torso.castShadow = true; resident.add(torso);
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.13, 0.2, 8), skin);
-  neck.position.y = 1.65; resident.add(neck);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.285, 12, 10), skin);
-  head.position.y = 1.91; head.castShadow = true; resident.add(head);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.31, 0.62, 6, 12), shirt);
+  torso.position.y = 1.16; torso.castShadow = true; torso.receiveShadow = true; resident.add(torso);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.13, 0.2, 12), skin);
+  neck.position.y = 1.65; neck.castShadow = true; resident.add(neck);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.025, 6, 16), makeMaterial(design.shirt));
+  collar.rotation.x = Math.PI / 2; collar.position.set(0, 1.55, 0.015); resident.add(collar);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.285, 20, 16), skin);
+  head.scale.set(1, 1.08, 0.96); head.position.y = 1.91; head.castShadow = true; resident.add(head);
+  const cheekTint = makeMaterial(design.skin);
+  const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 10), shirt);
+  const shoulderR = shoulderL.clone();
+  shoulderL.scale.set(1.15, 0.86, 0.9); shoulderR.scale.copy(shoulderL.scale);
+  shoulderL.position.set(-0.25, 1.43, 0); shoulderR.position.set(0.25, 1.43, 0);
+  resident.add(shoulderL, shoulderR);
   const earGeo = new THREE.SphereGeometry(0.065, 8, 6);
   for (const side of [-1, 1]) {
     const ear = new THREE.Mesh(earGeo, skin); ear.position.set(side * 0.27, 1.91, 0); resident.add(ear);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.027, 7, 6), makeMaterial('#211b18'));
-    eye.position.set(side * 0.105, 1.96, 0.255); resident.add(eye);
+    const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.047, 12, 10), makeMaterial('#f4e9dc'));
+    eyeWhite.scale.set(1, 0.72, 0.48);
+    eyeWhite.position.set(side * 0.105, 1.965, 0.249); resident.add(eyeWhite);
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 8), makeMaterial('#38251d'));
+    iris.position.set(side * 0.105, 1.963, 0.272); resident.add(iris);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), makeMaterial('#100e0d'));
+    pupil.position.set(side * 0.105, 1.963, 0.284); resident.add(pupil);
+    const brow = new THREE.Mesh(new THREE.CapsuleGeometry(0.014, 0.075, 3, 6), hair);
+    brow.rotation.z = side * -0.12; brow.position.set(side * 0.105, 2.035, 0.247); resident.add(brow);
   }
   const nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 7, 6), skin);
   nose.scale.set(0.8, 1.15, 0.8); nose.position.set(0, 1.88, 0.285); resident.add(nose);
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.018, 0.018), makeMaterial('#542d28'));
-  mouth.position.set(0, 1.79, 0.272); resident.add(mouth);
+  const noseBridge = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), skin);
+  noseBridge.scale.set(0.72, 1.65, 0.72); noseBridge.position.set(0, 1.91, 0.275); resident.add(noseBridge);
+  const mouth = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.075, 3, 7), makeMaterial('#542d28'));
+  mouth.rotation.z = Math.PI / 2; mouth.position.set(0, 1.79, 0.273); resident.add(mouth);
+  const lowerLip = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), makeMaterial('#8b5147'));
+  lowerLip.scale.set(1.2, 0.35, 0.35); lowerLip.position.set(0, 1.765, 0.27); resident.add(lowerLip);
 
   if (design.style === 'afro' || design.style === 'braids') {
     const crown = new THREE.Mesh(new THREE.SphereGeometry(design.style === 'afro' ? 0.34 : 0.29, 10, 8), hair);
     crown.scale.set(1, design.style === 'afro' ? 0.82 : 0.62, 1); crown.position.set(0, 2.12, -0.015); resident.add(crown);
     if (design.style === 'braids') {
-      for (const side of [-1, 1]) for (let n = 0; n < 3; n++) {
-        const braid = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.58, 6), hair);
-        braid.position.set(side * (0.22 + n * 0.025), 1.82 - n * 0.08, -0.04 - n * 0.045);
-        braid.rotation.z = side * -0.12; resident.add(braid);
+      for (const side of [-1, 1]) for (let n = 0; n < 4; n++) {
+        const braid = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.04, 0.64, 8), hair);
+        braid.position.set(side * (0.19 + n * 0.025), 1.78 - n * 0.055, -0.035 - n * 0.045);
+        braid.rotation.z = side * -0.12; braid.castShadow = true; resident.add(braid);
+        const bead = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), makeMaterial('#c99b55'));
+        bead.position.set(side * (0.19 + n * 0.025), 1.46 - n * 0.055, -0.035 - n * 0.045); resident.add(bead);
       }
     }
   } else if (design.style === 'wrap') {
@@ -138,6 +159,27 @@ function buildResident(index: number) {
     hand.position.set(0, -0.56, 0.015); pivot.add(hand);
   }
   resident.add(leftArm, rightArm);
+  // Character-specific accessories make each resident recognisable at a glance.
+  if (design.name === 'Kemi') {
+    const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.58, 0.22), makeMaterial('#6b526f'));
+    backpack.position.set(0, 1.22, -0.27); backpack.castShadow = true; resident.add(backpack);
+    for (const side of [-1, 1]) {
+      const strap = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.34, 3, 6), makeMaterial('#d4b58c'));
+      strap.position.set(side * 0.22, 1.3, 0.12); strap.rotation.z = side * -0.16; resident.add(strap);
+    }
+  }
+  if (design.name === 'Ayo') {
+    const strap = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.78, 3, 7), makeMaterial('#3d3932'));
+    strap.position.set(0.12, 1.17, 0.08); strap.rotation.z = -0.48; resident.add(strap);
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.46, 0.2), makeMaterial('#b58b43'));
+    bag.position.set(-0.28, 0.94, 0.12); bag.castShadow = true; resident.add(bag);
+  }
+  if (design.name === 'Tunde') {
+    const vestStripe = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.055, 0.025), makeMaterial('#e8c85b'));
+    vestStripe.position.set(0, 1.18, 0.302); resident.add(vestStripe);
+    const toolPouch = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 0.12), makeMaterial('#74543b'));
+    toolPouch.position.set(-0.22, 0.91, 0.18); resident.add(toolPouch);
+  }
 
   const leftLeg = new THREE.Group(); leftLeg.position.set(-0.145, 0.72, 0);
   const rightLeg = new THREE.Group(); rightLeg.position.set(0.145, 0.72, 0);
@@ -159,7 +201,7 @@ function buildResident(index: number) {
   resident.userData = {
     phase: index * 0.31,
     speed: 0.032 + index * 0.003,
-    leftLeg, rightLeg, leftArm, rightArm,
+    leftLeg, rightLeg, leftArm, rightArm, torso,
     role: design.role,
     profile: { id: index, name: design.name, age: design.age, role: design.role === 'trader' ? 'Provisions trader' : design.role === 'worker' ? 'Maintenance worker' : design.role === 'student' ? 'Student' : 'Neighbour', greeting: design.greeting, day: design.day, localTip: design.localTip } satisfies ResidentProfile
   };
