@@ -151,6 +151,10 @@ function buildWorld(scene: THREE.Scene) {
 function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const joystickRef = useRef<HTMLDivElement>(null);
+  const isInsideRef = useRef(false);
+  const interiorRef = useRef<THREE.Group | null>(null);
+  const outdoorObjectsRef = useRef<THREE.Object3D[]>([]);
+  const playerRef = useRef<THREE.Group | null>(null);
   const cameraDragRef = useRef({ pointerId: -1, x: 0, y: 0 });
   const cameraLookRef = useRef({ yaw: 0, pitch: 0.62 });
   const moveRef = useRef<Move>({ x: 0, z: 0 });
@@ -262,7 +266,7 @@ function App() {
 
     const { kiosk, colliders } = buildWorld(scene);
   const interior = buildStarterInterior(scene);
-  const isInsideRef = { current: false };
+  interiorRef.current = interior;
     const player = new THREE.Group();
     const skin = makeMaterial('#8f573b');
     const shirt = makeMaterial('#287f70');
@@ -277,7 +281,8 @@ function App() {
     legs.position.y = 0.34; player.add(legs);
     player.position.set(0, 0, 12);
     scene.add(player);
-    const outdoorObjects = scene.children.filter((object) => object !== hemi && object !== sun && object !== player && object !== interior);
+    playerRef.current = player;
+    outdoorObjectsRef.current = scene.children.filter((object) => object !== hemi && object !== sun && object !== player && object !== interior);
 
     // Lightweight neighbourhood residents: simple original low-poly walkers.
     const pedestrians = [0, 1, 2, 3].map((index) => {
@@ -377,11 +382,13 @@ function App() {
       target.set(player.position.x, 1.2, player.position.z);
       const look = cameraLookRef.current;
       const orbitDistance = isInsideRef.current ? 6 : 10;
-      const desiredCamera = new THREE.Vector3(
-        player.position.x + Math.sin(look.yaw) * Math.cos(look.pitch) * orbitDistance,
-        player.position.y + 1.2 + Math.sin(look.pitch) * orbitDistance,
-        player.position.z + Math.cos(look.yaw) * Math.cos(look.pitch) * orbitDistance
-      );
+      const desiredCamera = isInsideRef.current
+        ? new THREE.Vector3(player.position.x + Math.sin(look.yaw) * 5.5, player.position.y + 7.2, player.position.z + Math.cos(look.yaw) * 5.5)
+        : new THREE.Vector3(
+            player.position.x + Math.sin(look.yaw) * Math.cos(look.pitch) * orbitDistance,
+            player.position.y + 1.2 + Math.sin(look.pitch) * orbitDistance,
+            player.position.z + Math.cos(look.yaw) * Math.cos(look.pitch) * orbitDistance
+          );
       cameraDirection.copy(desiredCamera).sub(target).normalize();
       cameraRay.set(target, cameraDirection);
       cameraRay.far = 10;
@@ -423,6 +430,9 @@ function App() {
       });
       renderer.dispose();
       renderer.domElement.remove();
+      playerRef.current = null;
+      interiorRef.current = null;
+      outdoorObjectsRef.current = [];
     };
   }, []);
 
@@ -488,8 +498,8 @@ function App() {
         <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
-        {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
-        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
+        {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
+        {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
         {jobOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label="Local job centre"><div className="shop-heading"><div><small>ADO-EKITI · COMMUNITY JOB BOARD</small><h2>Find a day's work</h2><p>Take a short neighbourhood delivery shift.</p></div><button className="shop-close" onClick={() => setJobOpen(false)} aria-label="Close jobs">×</button></div><div className="job-offer"><span>🛵</span><div><b>Neighbourhood Errand Assistant</b><small>Collect and deliver local orders around the area</small><strong>₦{jobPay.toLocaleString('en-NG')} per shift</strong></div></div><div className="job-requirements"><b>SHIFT DETAILS</b><span>Duration: 30 seconds (prototype)</span><span>Energy and hydration are used while working</span><span>Payment arrives when the shift is completed</span></div><button className="start-shift" onClick={() => { setJobOpen(false); setWorkSeconds(30); setJobWorking(true); setStatus((s) => ({ ...s, message: 'You started a delivery shift. Keep going!' })); }}>START SHIFT · EARN ₦{jobPay.toLocaleString('en-NG')}</button></section></div>}
         {jobWorking && <div className="working-banner"><span>🛵 ON DELIVERY SHIFT</span><b>{workSeconds}s remaining</b><small>Keep exploring — your shift is underway.</small></div>}
         {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Your bedroom, living area and kitchen are ready.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button></div><div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
