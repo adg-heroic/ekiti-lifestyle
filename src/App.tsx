@@ -140,7 +140,7 @@ function buildResident(index: number) {
 
   const leftLeg = new THREE.Group(); leftLeg.position.set(-0.145, 0.72, 0);
   const rightLeg = new THREE.Group(); rightLeg.position.set(0.145, 0.72, 0);
-  for (const [pivot, side] of [[leftLeg, -1], [rightLeg, 1]] as Array<[THREE.Group, number]>) {
+  for (const pivot of [leftLeg, rightLeg]) {
     const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.42, 3, 7), lower);
     leg.position.y = -0.29; leg.castShadow = true; pivot.add(leg);
     const foot = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.32), shoe);
