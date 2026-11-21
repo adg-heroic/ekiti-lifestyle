@@ -685,19 +685,20 @@ function App() {
     shoeLeft.position.set(-0.17, 0.08, 0.08); shoeRight.position.set(0.17, 0.08, 0.08);
     player.add(shoeLeft, shoeRight);
     const styleGroup = new THREE.Group();
-    const afro = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 10), makeMaterial('#25201d'));
+    const styleHairMaterial = makeMaterial('#25201d');
+    const afro = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 10), styleHairMaterial);
     afro.scale.set(1, 0.78, 1); afro.position.y = 2.08; styleGroup.add(afro);
-    const fadeTop = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), makeMaterial('#25201d'));
+    const fadeTop = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), styleHairMaterial);
     fadeTop.position.y = 2.06; styleGroup.add(fadeTop);
     const braids = new THREE.Group();
-    const braidMaterial = makeMaterial('#25201d');
+    const braidMaterial = styleHairMaterial;
     for (const side of [-1, 1]) for (let i = 0; i < 4; i++) {
       const braid = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.7, 8), braidMaterial);
       braid.position.set(side * (0.18 + i * 0.025), 1.78 - i * 0.045, -0.05 - i * 0.04);
       braid.rotation.z = side * -0.1; braids.add(braid);
     }
     styleGroup.add(braids); player.add(styleGroup); styleGroup.visible = false;
-    player.userData.lookParts = { skin, shirt, trousers, shoeMaterial, hair, styleGroup, afro, fadeTop, braids };
+    player.userData.lookParts = { skin, shirt, trousers, shoeMaterial, hair, styleHairMaterial, styleGroup, afro, fadeTop, braids };
     player.position.set(0, 0, 12);
     scene.add(player);
     playerRef.current = player;
@@ -992,6 +993,7 @@ function App() {
     (parts.trousers as THREE.MeshStandardMaterial).color.set(playerLook.trousers);
     (parts.shoeMaterial as THREE.MeshStandardMaterial).color.set(playerLook.shoes);
     (parts.hair as THREE.MeshStandardMaterial).color.set(playerLook.hair);
+    (parts.styleHairMaterial as THREE.MeshStandardMaterial).color.set(playerLook.hair);
     const group = parts.styleGroup as THREE.Group;
     group.visible = playerLook.hairstyle !== 'close';
     (parts.afro as THREE.Mesh).visible = playerLook.hairstyle === 'afro';
