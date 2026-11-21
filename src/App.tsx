@@ -168,6 +168,32 @@ function App() {
     player.position.set(0, 0, 12);
     scene.add(player);
 
+    // Lightweight neighbourhood residents: simple original low-poly walkers.
+    const pedestrians = [0, 1, 2, 3].map((index) => {
+      const resident = new THREE.Group();
+      const palette = ['#bd754d', '#d6b16f', '#6b8e75', '#9b789c'];
+      const shirt = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.55, 3, 7), makeMaterial(palette[index]));
+      shirt.position.y = 1.02;
+      shirt.castShadow = true;
+      resident.add(shirt);
+      const face = new THREE.Mesh(new THREE.SphereGeometry(0.25, 9, 8), makeMaterial('#8f573b'));
+      face.position.y = 1.78;
+      face.castShadow = true;
+      resident.add(face);
+      const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.255, 8, 7, 0, Math.PI * 2, 0, Math.PI * 0.55), makeMaterial('#28211d'));
+      hairCap.position.y = 1.88;
+      resident.add(hairCap);
+      const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.52, 0.19), makeMaterial('#39485e'));
+      leftLeg.position.set(-0.13, 0.34, 0);
+      const rightLeg = leftLeg.clone();
+      rightLeg.position.x = 0.13;
+      resident.add(leftLeg, rightLeg);
+      resident.position.set(-38 + index * 19, 0, index % 2 === 0 ? -8.2 : -11.8);
+      resident.userData = { phase: index * 0.23, speed: 0.035 + index * 0.004, leftLeg, rightLeg };
+      scene.add(resident);
+      return resident;
+    });
+
     const clock = new THREE.Clock();
     const target = new THREE.Vector3();
     const cameraRay = new THREE.Raycaster();
@@ -199,6 +225,19 @@ function App() {
       if (!active) return;
       frame = requestAnimationFrame(animate);
       const delta = Math.min(clock.getDelta(), 0.04);
+      const elapsed = clock.elapsedTime;
+      pedestrians.forEach((resident) => {
+        const { phase, speed, leftLeg, rightLeg } = resident.userData as {
+          phase: number; speed: number; leftLeg: THREE.Mesh; rightLeg: THREE.Mesh;
+        };
+        const progress = ((elapsed * speed + phase) % 2);
+        const travel = progress <= 1 ? progress : 2 - progress;
+        resident.position.x = -39 + travel * 78;
+        resident.rotation.y = progress <= 1 ? Math.PI / 2 : -Math.PI / 2;
+        leftLeg.rotation.x = Math.sin(elapsed * 7 + phase * 12) * 0.42;
+        rightLeg.rotation.x = -leftLeg.rotation.x;
+        resident.position.y = Math.abs(Math.sin(elapsed * 7 + phase * 12)) * 0.035;
+      });
       const inputX = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + moveRef.current.x;
       const inputZ = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + moveRef.current.z;
       const direction = new THREE.Vector3(inputX, 0, inputZ);
