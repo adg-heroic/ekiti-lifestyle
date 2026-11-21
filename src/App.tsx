@@ -90,7 +90,9 @@ function buildWorld(scene: THREE.Scene) {
 
 function App() {
   const hostRef = useRef<HTMLDivElement>(null);
+  const joystickRef = useRef<HTMLDivElement>(null);
   const moveRef = useRef<Move>({ x: 0, z: 0 });
+  const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 });
   const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12 });
 
   useEffect(() => {
@@ -215,8 +217,30 @@ function App() {
     };
   }, []);
 
-  const setDirection = (x: number, y: number) => {
+  const updateJoystick = (event: React.PointerEvent<HTMLDivElement>) => {
+    const base = joystickRef.current;
+    if (!base) return;
+    const rect = base.getBoundingClientRect();
+    const radius = 42;
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const distance = Math.hypot(dx, dy);
+    const scale = distance > radius ? radius / distance : 1;
+    const x = (dx * scale) / radius;
+    const y = (dy * scale) / radius;
     moveRef.current = { x, z: y };
+    setJoystickPosition({ x: dx * scale, y: dy * scale });
+  };
+
+  const startJoystick = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updateJoystick(event);
+  };
+
+  const stopJoystick = () => {
+    moveRef.current = { x: 0, z: 0 };
+    setJoystickPosition({ x: 0, y: 0 });
   };
 
   return (
@@ -230,15 +254,23 @@ function App() {
         <div className="location-tag"><span>⌖</span><div><b>YOUR NEIGHBOURHOOD</b><small>Ado-Ekiti, Ekiti State</small></div></div>
         <div className="player-card"><div className="player-avatar">👤</div><div><b>Dami</b><small>New resident</small></div><span className="cash">₦12,000</span></div>
         <div className="world-tip">{status.message}</div>
-        <div className="touch-controls" aria-label="Touch movement controls">
-          <div className="joystick">
-            <button className="joy up" onPointerDown={() => setDirection(0, -1)} onPointerUp={() => setDirection(0, 0)} onPointerLeave={() => setDirection(0, 0)} aria-label="Move forward">▲</button>
-            <button className="joy left" onPointerDown={() => setDirection(-1, 0)} onPointerUp={() => setDirection(0, 0)} onPointerLeave={() => setDirection(0, 0)} aria-label="Move left">◀</button>
-            <button className="joy down" onPointerDown={() => setDirection(0, 1)} onPointerUp={() => setDirection(0, 0)} onPointerLeave={() => setDirection(0, 0)} aria-label="Move backward">▼</button>
-            <button className="joy right" onPointerDown={() => setDirection(1, 0)} onPointerUp={() => setDirection(0, 0)} onPointerLeave={() => setDirection(0, 0)} aria-label="Move right">▶</button>
+        <div className="touch-controls" aria-label="Virtual joystick movement control">
+          <div
+            ref={joystickRef}
+            className="joystick-base"
+            onPointerDown={startJoystick}
+            onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) updateJoystick(event); }}
+            onPointerUp={stopJoystick}
+            onPointerCancel={stopJoystick}
+            onLostPointerCapture={stopJoystick}
+            role="application"
+            aria-label="Drag joystick to move"
+          >
+            <span className="joystick-ring" />
+            <span className="joystick-knob" style={{ transform: `translate(calc(-50% + ${joystickPosition.x}px), calc(-50% + ${joystickPosition.y}px))` }} />
           </div>
         </div>
-        <div className="control-hint">WASD / ARROW KEYS <span>•</span> TOUCH PAD ON MOBILE</div>
+        <div className="control-hint">WASD / ARROW KEYS <span>•</span> JOYSTICK ON MOBILE</div>
         <div className="coordinate">X {status.x} · Z {status.z}</div>
       </section>
       <footer className="bottom-bar"><span><i /> 3D WORLD PROTOTYPE</span><span>BUILD YOUR LIFE. OWN YOUR FUTURE. EXPLORE YOUR CITY.</span><span>v0.2.0</span></footer>
