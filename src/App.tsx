@@ -314,8 +314,8 @@ function buildWorld(scene: THREE.Scene) {
         addBox(scene,sx,1.15,rowZ,3.7,0.22,2.25,'#8a573b');
         block(sx,rowZ,3.8,2.35);
         addBox(scene,sx,1.65,rowZ-1.05,3.75,0.16,0.18,sign);
-        addBox(scene,sx-1.72,2.05,rowZ-1.85,0.16,2.1,accent);
-        addBox(scene,sx+1.72,2.05,rowZ-1.85,0.16,2.1,accent);
+        addBox(scene,sx-1.72,2.05,rowZ-1.85,0.16,2.1,0.18,accent);
+        addBox(scene,sx+1.72,2.05,rowZ-1.85,0.16,2.1,0.18,accent);
         // Small produce / merchandise display crates on the counter.
         const goods = type===0 ? ['#b65d42','#d49a38','#7c9c4b'] : type===1 ? ['#c16b8c','#3d7891','#d3a34f'] : ['#718b62','#a8794e','#9b9b9b'];
         for(let g=0;g<3;g++) addBox(scene,sx-0.9+g*0.9,1.52,rowZ-0.25,0.62,0.55,0.55,goods[g]);
