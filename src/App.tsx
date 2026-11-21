@@ -432,6 +432,9 @@ function App() {
     outdoorObjectsRef.current = scene.children.filter((object) => object !== hemi && object !== sun && object !== player && object !== interior);
 
     const clock = new THREE.Clock();
+    const nightSky = new THREE.Color('#17243b');
+    const daySky = new THREE.Color('#a9d6dc');
+    const currentSky = new THREE.Color();
     const target = new THREE.Vector3();
     const cameraRay = new THREE.Raycaster();
     const cameraDirection = new THREE.Vector3();
@@ -476,16 +479,15 @@ function App() {
       sun.intensity = 0.22 + daylight * 2.25;
       hemi.intensity = 0.45 + daylight * 1.65;
       sun.color.setHSL(0.10, 0.42, 0.58 + daylight * 0.25);
-      scene.background = new THREE.Color('#17243b').lerp(new THREE.Color('#a9d6dc'), daylight);
-      scene.fog.color.copy(scene.background);
+      currentSky.copy(nightSky).lerp(daySky, daylight);
+      scene.background = currentSky;
+      scene.fog.color.copy(currentSky);
       pedestrians.forEach((resident) => {
-        const { phase, speed, leftLeg, rightLeg, leftArm, rightArm } = resident.userData as {
-          phase: number; speed: number; leftLeg: THREE.Group; rightLeg: THREE.Group;
+        const { phase, leftLeg, rightLeg, leftArm, rightArm } = resident.userData as {
+          phase: number; leftLeg: THREE.Group; rightLeg: THREE.Group;
           leftArm: THREE.Group; rightArm: THREE.Group;
         };
         const profile = resident.userData.profile as ResidentProfile;
-        const progress = ((elapsed * speed + phase) % 2);
-        const laneZ = profile.id % 2 === 0 ? 8.2 : 10.4;
         const playerDistance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
         const nearbyPerson = pedestrians.some((other) => other !== resident &&
           Math.hypot(other.position.x - resident.position.x, other.position.z - resident.position.z) < 1.05);
