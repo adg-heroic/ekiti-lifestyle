@@ -4,6 +4,7 @@ import * as THREE from 'three';
 type Move = { x: number; z: number };
 type GameStatus = { message: string; x: number; z: number; nearKiosk: boolean; nearHome: boolean; nearJob: boolean };
 type Needs = { hunger: number; thirst: number; energy: number; hygiene: number };
+type ResidentProfile = { id: number; name: string; age: number; role: string; greeting: string; day: string; localTip: string };
 
 function makeMaterial(color: string, roughness = 1) {
   return new THREE.MeshStandardMaterial({ color, roughness });
@@ -74,11 +75,11 @@ function buildStarterInterior(scene: THREE.Scene) {
 function buildResident(index: number) {
   const resident = new THREE.Group();
   const designs = [
-    { skin: '#70432f', shirt: '#d5a45f', lower: '#263b50', hair: '#211b18', style: 'afro', role: 'trader' },
-    { skin: '#8f573b', shirt: '#397c70', lower: '#49344d', hair: '#241d1a', style: 'wrap', role: 'resident' },
-    { skin: '#5c392b', shirt: '#e6dfcf', lower: '#344b70', hair: '#191614', style: 'short', role: 'worker' },
-    { skin: '#a66b4d', shirt: '#b95d48', lower: '#343d50', hair: '#30221b', style: 'braids', role: 'student' },
-    { skin: '#794a36', shirt: '#668b50', lower: '#76543c', hair: '#211a17', style: 'cap', role: 'resident' }
+    { skin: '#70432f', shirt: '#d5a45f', lower: '#263b50', hair: '#211b18', style: 'afro', role: 'trader', name: 'Bisi', age: 34, greeting: 'Ẹ káàárọ̀! Welcome, neighbour. I sell provisions around here.', day: 'I run a small provisions stall. Mornings are busy, especially when students pass by.', localTip: 'Try the roadside kiosk when you need a quick drink or snack.' },
+    { skin: '#8f573b', shirt: '#397c70', lower: '#49344d', hair: '#241d1a', style: 'wrap', role: 'resident', name: 'Mama Tola', age: 52, greeting: 'Ah, my dear! It is good to see a new face in the area.', day: 'I look after my home and check on the neighbours. We try to keep this street peaceful.', localTip: 'People around here know one another. A friendly greeting goes a long way.' },
+    { skin: '#5c392b', shirt: '#e6dfcf', lower: '#344b70', hair: '#191614', style: 'short', role: 'worker', name: 'Tunde', age: 29, greeting: 'How far, my guy? Just taking a short break from work.', day: 'I do maintenance jobs around the neighbourhood. There is always something to fix.', localTip: 'Check the community job board if you want to earn some extra cash.' },
+    { skin: '#a66b4d', shirt: '#b95d48', lower: '#343d50', hair: '#30221b', style: 'braids', role: 'student', name: 'Kemi', age: 21, greeting: 'Hi! You must be one of the new residents. Nice to meet you.', day: 'I am a student. I usually head out for classes and meet friends later in the day.', localTip: 'The main road is the easiest way to find your bearings around this part of town.' },
+    { skin: '#794a36', shirt: '#668b50', lower: '#76543c', hair: '#211a17', style: 'cap', role: 'resident', name: 'Ayo', age: 26, greeting: 'Oga, welcome o! Hope you are settling in well.', day: 'I help people with errands and deliveries whenever I can find a job.', localTip: 'The job board has a starter delivery shift you can try.' }
   ];
   const design = designs[index % designs.length];
   const skin = makeMaterial(design.skin);
@@ -159,7 +160,8 @@ function buildResident(index: number) {
     phase: index * 0.31,
     speed: 0.032 + index * 0.003,
     leftLeg, rightLeg, leftArm, rightArm,
-    role: design.role
+    role: design.role,
+    profile: { id: index, name: design.name, age: design.age, role: design.role === 'trader' ? 'Provisions trader' : design.role === 'worker' ? 'Maintenance worker' : design.role === 'student' ? 'Student' : 'Neighbour', greeting: design.greeting, day: design.day, localTip: design.localTip } satisfies ResidentProfile
   };
   return resident;
 }
@@ -256,6 +258,9 @@ function App() {
   const [shopOpen, setShopOpen] = useState(false);
   const [homeOpen, setHomeOpen] = useState(false);
   const [insideHome, setInsideHome] = useState(false);
+  const [nearbyResident, setNearbyResident] = useState<ResidentProfile | null>(null);
+  const [talkingTo, setTalkingTo] = useState<ResidentProfile | null>(null);
+  const [dialogueLine, setDialogueLine] = useState('');
   const [jobOpen, setJobOpen] = useState(false);
   const [jobWorking, setJobWorking] = useState(false);
   const [workSeconds, setWorkSeconds] = useState(0);
@@ -484,6 +489,16 @@ function App() {
         const nearKiosk = !isInsideRef.current && player.position.distanceTo(kiosk) < 3.2;
         const nearJob = !isInsideRef.current && Math.hypot(player.position.x + 7.5, player.position.z + 4.2) < 4.2;
         const nearHome = isInsideRef.current || Math.hypot(player.position.x, player.position.z + 1.7) < 2.8;
+        let closest: { profile: ResidentProfile; distance: number } | null = null;
+        if (!isInsideRef.current) {
+          for (const resident of pedestrians) {
+            const distance = Math.hypot(player.position.x - resident.position.x, player.position.z - resident.position.z);
+            if (distance < 4.1 && (!closest || distance < closest.distance)) {
+              closest = { profile: resident.userData.profile as ResidentProfile, distance };
+            }
+          }
+        }
+        setNearbyResident(closest?.profile ?? null);
         setStatus((s) => ({ ...s, x: Math.round(player.position.x), z: Math.round(player.position.z), nearKiosk, nearHome, nearJob }));
       }
       if (elapsed - lastNeedsTick >= 5) {
@@ -575,9 +590,11 @@ function App() {
         <div className="world-tip">{status.message}</div>
         <div className="needs-panel" aria-label="Player needs">{([['HUNGER', needs.hunger, '🍲'], ['THIRST', needs.thirst, '💧'], ['ENERGY', needs.energy, '⚡'], ['HYGIENE', needs.hygiene, '🧼']] as const).map(([label, value, emoji]) => <div className="need-row" key={label}><span>{emoji} {label}</span><div className="need-track"><i style={{ width: `${value}%` }} /></div><b>{Math.round(value)}%</b></div>)}</div>
         {status.nearKiosk && !shopOpen && <button className="interact-prompt" onClick={() => setShopOpen(true)}>🛍️ OPEN KIOSK <span>Tap to shop</span></button>}
+        {nearbyResident && !talkingTo && !shopOpen && !homeOpen && !jobOpen && <button className="resident-interact-prompt" onClick={() => { setTalkingTo(nearbyResident); setDialogueLine(nearbyResident.greeting); }}>💬 TALK TO {nearbyResident.name.toUpperCase()} <span>{nearbyResident.role} · Tap to greet</span></button>}
         {status.nearJob && !jobOpen && !jobWorking && <button className="job-interact-prompt" onClick={() => setJobOpen(true)}>💼 JOB BOARD <span>Tap to find work</span></button>}
         {status.nearHome && !homeOpen && !insideHome && <button className="home-interact-prompt" onClick={() => { isInsideRef.current = true; playerRef.current?.position.set(0, 0, 2.8); outdoorObjectsRef.current.forEach((object) => { object.visible = false; }); if (interiorRef.current) interiorRef.current.visible = true; setInsideHome(true); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'Welcome inside. Explore your home and make yourself comfortable.' })); }}>🏠 ENTER YOUR HOME <span>Tap to go inside</span></button>}
         {insideHome && <><div className="interior-label">YOUR HOME · INSIDE</div><button className="interior-exit" onClick={() => { isInsideRef.current = false; if (interiorRef.current) interiorRef.current.visible = false; outdoorObjectsRef.current.forEach((object) => { object.visible = true; }); playerRef.current?.position.set(0, 0, -1.7); setInsideHome(false); setHomeOpen(false); setStatus((s) => ({ ...s, message: 'You stepped outside into your neighbourhood.' })); }}>EXIT HOME ↗</button>{status.nearHome && !homeOpen && <button className="home-interact-prompt" onClick={() => setHomeOpen(true)}>🏡 HOME ACTIONS <span>Sleep · shower · prepare food</span></button>}</>}
+        {talkingTo && <div className="shop-backdrop" role="presentation"><section className="resident-panel" role="dialog" aria-modal="true" aria-label={`Conversation with ${talkingTo.name}`}><div className="shop-heading"><div><small>ADO-EKITI · NEIGHBOURHOOD</small><h2>{talkingTo.name}</h2><p>{talkingTo.age} years old · {talkingTo.role}</p></div><button className="shop-close" onClick={() => setTalkingTo(null)} aria-label="End conversation">×</button></div><div className="resident-dialogue"><span>💬</span><p>{dialogueLine}</p></div><div className="resident-topics"><button onClick={() => setDialogueLine(talkingTo.day)}>How is your day going?</button><button onClick={() => setDialogueLine(talkingTo.localTip)}>Tell me about this neighbourhood</button></div><button className="start-shift resident-goodbye" onClick={() => { setTalkingTo(null); setStatus((s) => ({ ...s, message: `You said goodbye to ${talkingTo.name}.` })); }}>NICE TALKING TO YOU</button></section></div>}
         {jobOpen && <div className="shop-backdrop" role="presentation"><section className="job-panel" role="dialog" aria-modal="true" aria-label="Local job centre"><div className="shop-heading"><div><small>ADO-EKITI · COMMUNITY JOB BOARD</small><h2>Find a day's work</h2><p>Take a short neighbourhood delivery shift.</p></div><button className="shop-close" onClick={() => setJobOpen(false)} aria-label="Close jobs">×</button></div><div className="job-offer"><span>🛵</span><div><b>Neighbourhood Errand Assistant</b><small>Collect and deliver local orders around the area</small><strong>₦{jobPay.toLocaleString('en-NG')} per shift</strong></div></div><div className="job-requirements"><b>SHIFT DETAILS</b><span>Duration: 30 seconds (prototype)</span><span>Energy and hydration are used while working</span><span>Payment arrives when the shift is completed</span></div><button className="start-shift" onClick={() => { setJobOpen(false); setWorkSeconds(30); setJobWorking(true); setStatus((s) => ({ ...s, message: 'You started a delivery shift. Keep going!' })); }}>START SHIFT · EARN ₦{jobPay.toLocaleString('en-NG')}</button></section></div>}
         {jobWorking && <div className="working-banner"><span>🛵 ON DELIVERY SHIFT</span><b>{workSeconds}s remaining</b><small>Keep exploring — your shift is underway.</small></div>}
         {homeOpen && <div className="shop-backdrop" role="presentation"><section className="home-panel" role="dialog" aria-modal="true" aria-label="Home interactions"><div className="shop-heading"><div><small>YOUR HOME · ADO-EKITI</small><h2>What would you like to do?</h2><p>Your bedroom, living area and kitchen are ready.</p></div><button className="shop-close" onClick={() => setHomeOpen(false)} aria-label="Close home menu">×</button></div><div className="home-actions"><button onClick={() => performHomeAction('sleep')}><span>🛏️</span><b>Sleep</b><small>Restore energy</small></button><button onClick={() => performHomeAction('shower')}><span>🚿</span><b>Take a shower</b><small>Restore hygiene</small></button><button onClick={() => performHomeAction('cook')}><span>🍲</span><b>Cook a meal</b><small>Use 1 snack or fruit</small></button></div><div className="home-consumables"><b>USE ITEMS FROM YOUR BAG</b>{([{ id: 'water', label: 'Drink water', emoji: '💧' }, { id: 'softdrink', label: 'Drink soft drink', emoji: '🥤' }, { id: 'snack', label: 'Eat local snack', emoji: '🥟' }, { id: 'fruit', label: 'Eat fruit', emoji: '🍊' }] as const).map((item) => <button key={item.id} disabled={!(inventory[item.id] || 0)} onClick={() => consumeItem(item.id)}><span>{item.emoji}</span>{item.label}<small>×{inventory[item.id] || 0}</small></button>)}</div><div className="home-inventory">Items are used from your bag. Cooking uses one snack or fruit.</div></section></div>}
