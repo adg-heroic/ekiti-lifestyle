@@ -95,7 +95,6 @@ function buildResident(index: number) {
   collar.rotation.x = Math.PI / 2; collar.position.set(0, 1.55, 0.015); resident.add(collar);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.285, 20, 16), skin);
   head.scale.set(1, 1.08, 0.96); head.position.y = 1.91; head.castShadow = true; resident.add(head);
-  const cheekTint = makeMaterial(design.skin);
   const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 10), shirt);
   const shoulderR = shoulderL.clone();
   shoulderL.scale.set(1.15, 0.86, 0.9); shoulderR.scale.copy(shoulderL.scale);
