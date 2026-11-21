@@ -473,6 +473,9 @@ function App() {
   const playerRef = useRef<THREE.Group | null>(null);
   const vehicleGroupsRef = useRef<Record<string, THREE.Group>>({});
   const vehicleDrivingRef = useRef(false);
+  const vehicleEngineLevelRef = useRef(0);
+  const vehicleTyreLevelRef = useRef(0);
+  const vehicleHandlingLevelRef = useRef(0);
   const selectedVehicleRef = useRef<string | null>(null);
   const cameraDragRef = useRef({ pointerId: -1, x: 0, y: 0 });
   const cameraLookRef = useRef({ yaw: 0, pitch: 0.62 });
@@ -503,9 +506,15 @@ function App() {
   useEffect(() => { weatherRef.current = weather; }, [weather]);
   useEffect(() => { selectedVehicleRef.current = selectedVehicleId; }, [selectedVehicleId]);
   useEffect(() => { vehicleDrivingRef.current = vehicleDriving; }, [vehicleDriving]);
+  useEffect(() => {
+    const selected = ownedVehicles.find((vehicle) => vehicle.modelId === selectedVehicleId);
+    vehicleEngineLevelRef.current = selected?.upgrades.engine ?? 0;
+    vehicleTyreLevelRef.current = selected?.upgrades.tyres ?? 0;
+    vehicleHandlingLevelRef.current = selected?.upgrades.handling ?? 0;
+  }, [ownedVehicles, selectedVehicleId]);
   useEffect(() => { try { localStorage.setItem('ekiti-owned-vehicles-v1', JSON.stringify(ownedVehicles)); if (selectedVehicleId) localStorage.setItem('ekiti-selected-vehicle-v1', selectedVehicleId); else localStorage.removeItem('ekiti-selected-vehicle-v1'); } catch { /* Garage saves are local to this device. */ } }, [ownedVehicles, selectedVehicleId]);
   useEffect(() => {
-    Object.entries(vehicleGroupsRef.current).forEach(([id, group], index) => {
+    Object.entries(vehicleGroupsRef.current).forEach(([id, group]) => {
       const owned = ownedVehicles.some((vehicle) => vehicle.modelId === id);
       group.visible = owned;
     });
@@ -1228,7 +1237,7 @@ function App() {
         const thirstFactor = currentNeeds.thirst < 15 ? 0.72 : currentNeeds.thirst < 30 ? 0.88 : 1;
         const mood = (currentNeeds.hunger + currentNeeds.thirst + currentNeeds.energy + currentNeeds.fun + currentNeeds.social + currentNeeds.hygiene + currentNeeds.bladder) / 7;
         const moodFactor = mood < 20 ? 0.78 : mood < 40 ? 0.9 : 1;
-        const movementSpeed = (vehicleDrivingRef.current ? 10.5 : autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor * moodFactor;
+        const movementSpeed = (vehicleDrivingRef.current ? 10.5 * (1 + vehicleEngineLevelRef.current * 0.12 + vehicleTyreLevelRef.current * 0.025) : autoDestinationRef.current ? 4.3 : 5.2) * energyFactor * hungerFactor * thirstFactor * moodFactor;
         const stepX = direction.x * delta * movementSpeed;
         const stepZ = direction.z * delta * movementSpeed;
         const canStandAt = (x: number, z: number) => isInsideRef.current
@@ -1236,7 +1245,11 @@ function App() {
           : x >= -45 && x <= 45 && z >= -48 && z <= 22 && !colliders.some((obstacle) => Math.abs(x - obstacle.x) < obstacle.halfX + 0.42 && Math.abs(z - obstacle.z) < obstacle.halfZ + 0.42);
         if (canStandAt(player.position.x + stepX, player.position.z)) player.position.x += stepX;
         if (canStandAt(player.position.x, player.position.z + stepZ)) player.position.z += stepZ;
-        player.rotation.y = Math.atan2(direction.x, direction.z);
+        const desiredYaw = Math.atan2(direction.x, direction.z);
+        if (vehicleDrivingRef.current) {
+          const turn = Math.atan2(Math.sin(desiredYaw - player.rotation.y), Math.cos(desiredYaw - player.rotation.y));
+          player.rotation.y += turn * Math.min(1, delta * (4.2 + vehicleHandlingLevelRef.current * 1.5));
+        } else player.rotation.y = desiredYaw;
       }
       const activeVehicle = selectedVehicleRef.current ? vehicleGroupsRef.current[selectedVehicleRef.current] : null;
       if (activeVehicle && vehicleDrivingRef.current) {
