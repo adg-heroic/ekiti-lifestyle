@@ -280,6 +280,12 @@ function buildWorld(scene: THREE.Scene) {
   const treeSpots = [[-18,-3],[18,-3],[-40,-13],[-35,-8],[-13,-17],[14,-17],[39,-14],[-40,-34],[-13,-37],[13,-36],[39,-34],[-18,12],[19,12],[-8,17],[9,17]] as number[][];
   for (const [x, z] of treeSpots) { addTree(scene, x, z); block(x, z, 1.8, 1.8); }
 
+  // Three full-size market compounds in one walkable commercial district.
+  const market=(x:number,z:number,accent:string)=>{addBox(scene,x,0,z,8.5,2.8,7.2,'#c9a47b');block(x,z,8.8,7.5);addBox(scene,x,2.85,z,9.2,0.22,7.8,accent);addBox(scene,x,1.5,z-3.68,8.6,0.42,0.12,'#f0d9a5');for(let i=-3;i<=3;i+=2){addBox(scene,x+i,0.65,z-3.82,1.45,1.15,0.12,'#9a6544');addBox(scene,x+i,1.45,z-3.8,1.5,0.12,0.12,'#f3dfad');}for(let i=-2;i<=2;i+=2){addBox(scene,x+i,0.6,z+1,1.5,1.1,1.2,'#a8754b');addBox(scene,x+i,1.2,z+1,1.45,0.12,1.15,'#d6b16d');}};
+  market(17,-25,'#b65d42'); market(27,-25,'#397c70'); market(37,-25,'#a77b42');
+  // Campus compounds for UNAD and Ado Polytechnic.
+  const campus=(x:number,z:number,wall:string)=>{addBox(scene,x,0,z,13,2.4,9,wall);block(x,z,13.5,9.5);addBox(scene,x,2.5,z,13.6,0.2,9.5,'#a9573e');addBox(scene,x,1.2,z-4.8,5.8,2.1,0.35,'#e9d9bd');addBox(scene,x,2.35,z-4.85,6,0.28,0.45,'#d6a85e');addBox(scene,x-3,z,4.3,3.1,5.8,'#d6d0bd');addBox(scene,x+3,z,4.3,3.1,5.8,'#c4c9bd');};
+  campus(-34,-39,'#d5c49f'); campus(-13,-39,'#c9b99a');
   // Streetlights and simple roadside planting add scale without heavy assets.
   for (const [x,z] of [[-18,-10],[18,-10],[-25,-18],[-25,-37]] as number[][]) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.1,4,6), makeMaterial('#46534a'));
