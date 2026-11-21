@@ -178,3 +178,14 @@ button{font:inherit}
 .wardrobe-footer button{border:1px solid #ffffff28;border-radius:9px;padding:11px;background:#ffffff0b;color:#f1e8d7;font-size:9px;font-weight:900;cursor:pointer}
 .wardrobe-footer .wardrobe-done{border-color:#d6a85e;background:#d6a85e;color:#1b281f}
 @media(max-width:700px){.wardrobe-toggle{padding:8px 7px;font-size:8px}.wardrobe-panel{padding:15px;border-radius:16px}.wardrobe-options{gap:5px}.wardrobe-options button{font-size:8px;padding:9px 3px}.wardrobe-swatches{gap:9px}.wardrobe-swatches button{width:31px;height:31px}}
+
+
+/* Phase 1 · individually selectable home furniture */
+.home-object-panel{width:min(470px,100%);max-height:min(680px,92%);overflow:auto;border:1px solid #ffffff30;border-radius:20px;padding:22px;background:linear-gradient(160deg,#293e32,#14231d 75%);box-shadow:0 24px 70px #0009;color:#f5f2e9}
+.home-object-panel .shop-heading h2{font-size:21px}.home-object-panel .shop-heading p{max-width:340px;line-height:1.55}
+.home-object-actions{display:grid;gap:9px;margin-top:20px}.home-object-actions button{display:flex;align-items:center;gap:12px;width:100%;padding:13px;border:1px solid #ffffff24;border-radius:12px;background:#ffffff0b;color:#f5f2e9;text-align:left;cursor:pointer}
+.home-object-actions button>span{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;border-radius:10px;background:#d6a85e22;color:#f1d08c;font-size:13px}.home-object-actions button>div{display:grid;gap:4px;min-width:0}
+.home-object-actions button b{font-size:11px}.home-object-actions button small{color:#b9c6b8;font-size:9px;line-height:1.4}.home-object-actions button .home-object-duration{color:#f1d08c;font-weight:800}
+.home-object-actions button:active{border-color:#d6a85e;background:#d6a85e20}.home-object-skills{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:15px;padding:12px;border-radius:10px;background:#0e1b16}
+.home-object-skills b{flex-basis:100%;color:#d5ad6e;font-size:8px;letter-spacing:1px}.home-object-skills span{padding:6px 8px;border:1px solid #ffffff1b;border-radius:7px;color:#e5e9df;font-size:9px}
+@media(max-width:700px){.home-object-panel{padding:16px;border-radius:16px}.home-object-panel .shop-heading h2{font-size:18px}.home-object-actions button{padding:11px}.home-object-actions button b{font-size:10px}}
