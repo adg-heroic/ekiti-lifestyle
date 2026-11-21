@@ -92,7 +92,6 @@ function App() {
   const hostRef = useRef<HTMLDivElement>(null);
   const moveRef = useRef<Move>({ x: 0, z: 0 });
   const [status, setStatus] = useState<GameStatus>({ message: 'Welcome to your new home in Ado-Ekiti.', x: 0, z: 12 });
-  const [joystick, setJoystick] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -218,7 +217,6 @@ function App() {
 
   const setDirection = (x: number, y: number) => {
     moveRef.current = { x, z: y };
-    setJoystick({ x, y });
   };
 
   return (
